@@ -1,6 +1,15 @@
 char dataToSend[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";
 // 32,16,8,0,Ana are mere si
 
+enum blockInformation {
+  BLOCK_SIZE = 32,
+  BLOCK_HEADER_SIZE = 16,
+  BLOCK_BODY_SIZE = 16
+};
+
+char CONNECTED[] = "CONNECTED";
+char CONNECTED_ERROR[] = "EROARE_LA_CONECTARE";
+
 struct MyUdpPacket {
   int pSize;
   int bLength;
@@ -10,6 +19,8 @@ struct MyUdpPacket {
 } myUdpPacket;
 
 enum connectionStatus {
+  IDLE,
+  WAITING,
   READY,
   RUNNING,
 };
@@ -22,10 +33,9 @@ void setup() {
   Serial.begin(9600);
   Serial.setTimeout(500);
 
-  connection.status = READY;
+  connection.status = WAITING;
   myUdpPacket.pSize = 32;
   myUdpPacket.bLength = 16;
-  delay(10000);
 }
 
 void addNumberToCharArray(int number, char *str) {
@@ -33,15 +43,24 @@ void addNumberToCharArray(int number, char *str) {
   sprintf(aux, "%d,", number);
   strcat(str, aux);
 }
+
+void addOffsetToCharArray(char *str) {
+  int strLength = strlen(str);
+  for (int index = strLength; index < BLOCK_HEADER_SIZE; index++) {
+    str[index] = ',';
+  }
+}
+
 void formatSendData(MyUdpPacket &myUdpPacket, char *packet) {
   addNumberToCharArray(myUdpPacket.pSize, packet);
   addNumberToCharArray(myUdpPacket.bLength, packet);
   addNumberToCharArray(myUdpPacket.bNumber, packet);
   addNumberToCharArray(myUdpPacket.bOffset, packet);
+  addOffsetToCharArray(packet);
   strcat(packet, myUdpPacket.bData);
 }
 
-bool sendData(char *dataToSend) {
+void sendData(char *dataToSend) {
   myUdpPacket.bNumber = (strlen(dataToSend) / myUdpPacket.bLength) + 1;
 
   int bLength = myUdpPacket.bLength;
@@ -53,22 +72,41 @@ bool sendData(char *dataToSend) {
     for (int dataIndex = blockIndex * bLength; dataIndex < blockIndex * bLength + bLength; dataIndex++) {
       int bDataLength = strlen(myUdpPacket.bData);
       myUdpPacket.bData[bDataLength] = dataToSend[dataIndex];
-    }  // formam blocurile de cate 12
-    // myUdpPacket.bData[strlen(myUdpPacket.bData) - 1] = '\0';
+    }
 
     char packet[myUdpPacket.pSize];
     memset(packet, '\0', sizeof(char) * myUdpPacket.pSize);
     formatSendData(myUdpPacket, packet);
     Serial.write(packet, strlen(packet));
-    delay(1000);
+  }
+}
+
+void connectArduinoToSlave() {
+  Serial.println("WAITING FOR CONNECTION");
+  while (!Serial.available())
+    ;
+  int connectedLength = strlen(CONNECTED);
+  char connected[connectedLength];
+
+  Serial.readBytes(connected, connectedLength);
+
+  if (strcmp(connected, CONNECTED) == 0) {
+    Serial.write(CONNECTED, connectedLength);
+    connection.status = READY;
+  } else {
+    Serial.write(CONNECTED_ERROR, strlen(CONNECTED_ERROR));
+    connection.status = IDLE;
   }
 }
 
 void loop() {
+  if (connection.status == WAITING) {
+    connectArduinoToSlave();
+  }
   if (connection.status == READY) {
     connection.status = RUNNING;
     sendData(dataToSend);
     connection.status = READY;
+    delay(5000);
   }
-  delay(5000);
 }

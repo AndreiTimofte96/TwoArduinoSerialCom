@@ -1,4 +1,8 @@
 // 32,16,8,0,Ana are mere si
+
+char CONNECTED[] = "CONNECTED";
+char CONNECTED_ERROR[] = "EROARE_LA_CONECTARE";
+
 enum blockInformation {
   BLOCK_SIZE = 32,
   BLOCK_HEADER_SIZE = 16,
@@ -6,6 +10,8 @@ enum blockInformation {
 };
 
 enum connectionStatus {
+  IDLE,
+  WAITING,
   READY,
   RUNNING,
 };
@@ -28,8 +34,8 @@ void setup() {
   Serial.begin(9600);
   Serial.setTimeout(500);
   Serial.flush();
-
-  connection.status = READY;
+  delay(10000);
+  connection.status = WAITING;
 }
 
 void formatReceiveData(MyUdpPacket& myUdpPacket, char* bData) {
@@ -68,7 +74,31 @@ void receiveData(char* dataToReceive) {
   }
 }
 
+void connectArduinoToMaster() {
+  Serial.write(CONNECTED, strlen(CONNECTED));
+  connection.status = READY;
+
+  while (!Serial.available())
+    ;
+  int connectedLength = strlen(CONNECTED);
+  char connected[connectedLength];
+
+  Serial.readBytes(connected, connectedLength);
+  Serial.println(connected);
+
+  if (strcmp(connected, CONNECTED) == 0) {
+    connection.status = READY;
+  } else {
+    connection.status = IDLE;
+    Serial.println(CONNECTED_ERROR);
+  }
+}
+
 void loop() {
+  if (connection.status == WAITING) {
+    connectArduinoToMaster();
+  }
+
   if (connection.status == READY && Serial.available()) {
     connection.status = RUNNING;
     memset(dataToReceive, '\0', sizeof(char) * 1000);
