@@ -1,14 +1,24 @@
-char dataToSend[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";
 // 32,16,8,0,Ana are mere si
 
+////////////DATA STRUCTURES//////////////////
 enum blockInformation {
   BLOCK_SIZE = 32,
   BLOCK_HEADER_SIZE = 16,
   BLOCK_BODY_SIZE = 16
 };
 
-char CONNECTED[] = "CONNECTED";
-char CONNECTED_ERROR[] = "EROARE_LA_CONECTARE";
+char CONNECTED_TEXT[] = "CONNECTED";
+char DISCONNECTED_TEXT[] = "EROARE_LA_CONECTARE";
+char *ARDUINO_ERROR;
+
+enum connectionStatus {
+  DISCONNECTED,
+  CONNECTED,
+};
+
+struct Connection {
+  connectionStatus status;
+} connection;
 
 struct MyUdpPacket {
   int pSize;
@@ -17,25 +27,55 @@ struct MyUdpPacket {
   int bOffset;
   char *bData;
 } myUdpPacket;
+////////////DATA STRUCTURES//////////////////
 
-enum connectionStatus {
-  IDLE,
-  WAITING,
-  READY,
-  RUNNING,
-};
+////////////HELPER FUNCTIONS//////////////////
+void waitRead() {
+  while (!Serial.available())
+    ;
+}
 
-struct Connection {
-  connectionStatus status;
-} connection;
+void setArduinoError(char *error) {
+  ARDUINO_ERROR = (char *)malloc(sizeof(char) * strlen(error) + 1);
+  memset(ARDUINO_ERROR, '\0', sizeof(char) * strlen(error) + 1);
+  strcpy(ARDUINO_ERROR, error);
+}
 
-void setup() {
-  Serial.begin(9600);
-  Serial.setTimeout(500);
+char *getArduinoError() {
+  return ARDUINO_ERROR;
+}
 
-  connection.status = WAITING;
-  myUdpPacket.pSize = 32;
-  myUdpPacket.bLength = 16;
+void printLastError() {
+  Serial.println(getArduinoError());
+}
+////////////HELPER FUNCTIONS//////////////////
+
+////////////CONNECT AND READ FUNCTIONS///////
+bool arduinoAcceptConnection() {
+  if (connection.status == DISCONNECTED) {
+    Serial.println("WAITING FOR CONNECTION");
+
+    int connectedLength = strlen(CONNECTED_TEXT);
+    char connected[connectedLength];
+
+    waitRead();
+    Serial.readBytes(connected, connectedLength);
+
+    if (strcmp(connected, CONNECTED_TEXT) == 0) {
+      Serial.write(CONNECTED_TEXT, connectedLength);
+      connection.status = CONNECTED;
+      return true;
+    }
+
+    Serial.write(DISCONNECTED_TEXT, strlen(DISCONNECTED_TEXT));
+    connection.status = DISCONNECTED;
+    setArduinoError(DISCONNECTED_TEXT);
+    return false;
+  }
+
+  connection.status = DISCONNECTED;
+  setArduinoError(DISCONNECTED_TEXT);
+  return false;
 }
 
 void addNumberToCharArray(int number, char *str) {
@@ -81,32 +121,34 @@ void sendData(char *dataToSend) {
   }
 }
 
-void connectArduinoToSlave() {
-  Serial.println("WAITING FOR CONNECTION");
-  while (!Serial.available())
-    ;
-  int connectedLength = strlen(CONNECTED);
-  char connected[connectedLength];
-
-  Serial.readBytes(connected, connectedLength);
-
-  if (strcmp(connected, CONNECTED) == 0) {
-    Serial.write(CONNECTED, connectedLength);
-    connection.status = READY;
-  } else {
-    Serial.write(CONNECTED_ERROR, strlen(CONNECTED_ERROR));
-    connection.status = IDLE;
+bool udpWrite(char *dataToSend) {
+  if (connection.status == CONNECTED) {
+    sendData(dataToSend);
+    return true;
   }
+  setArduinoError(DISCONNECTED_TEXT);
+  return false;
+}
+////////////CONNECT AND READ FUNCTIONS///////
+
+void setup() {
+  Serial.begin(9600);
+  Serial.setTimeout(500);
+
+  connection.status = DISCONNECTED;
+  myUdpPacket.pSize = 32;
+  myUdpPacket.bLength = 16;
 }
 
+char dataToSend[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";
 void loop() {
-  if (connection.status == WAITING) {
-    connectArduinoToSlave();
+  if (!arduinoAcceptConnection()) {
+    printLastError();
   }
-  if (connection.status == READY) {
-    connection.status = RUNNING;
-    sendData(dataToSend);
-    connection.status = READY;
-    delay(5000);
+
+  if (!udpWrite(dataToSend)) {
+    printLastError();
   }
+  delay(5000);
+  //arduinoClose();
 }
