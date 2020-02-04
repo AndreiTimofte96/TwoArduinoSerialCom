@@ -9,11 +9,14 @@ enum blockInformation {
 
 char CONNECTED_TEXT[] = "CONNECTED";
 char DISCONNECTED_TEXT[] = "EROARE_LA_CONECTARE";
+char READ_ERROR_TEXT[] = "EROARE_LA_CITIRE";
+char WRITE_ERROR_TEXT[] = "EROARE_LA_SCRIERE";
 char *ARDUINO_ERROR;
 
 enum connectionStatus {
   DISCONNECTED,
   CONNECTED,
+  IDLE,
 };
 
 struct Connection {
@@ -35,6 +38,12 @@ void waitRead() {
     ;
 }
 
+void serialFlush() {
+  byte b;
+  while (Serial.readBytes(&b, 1) > 0)
+    ;
+}
+
 void setArduinoError(char *error) {
   ARDUINO_ERROR = (char *)malloc(sizeof(char) * strlen(error) + 1);
   memset(ARDUINO_ERROR, '\0', sizeof(char) * strlen(error) + 1);
@@ -46,6 +55,7 @@ char *getArduinoError() {
 }
 
 void printLastError() {
+  Serial.print("EROARE: ");
   Serial.println(getArduinoError());
 }
 ////////////HELPER FUNCTIONS//////////////////
@@ -53,6 +63,7 @@ void printLastError() {
 ////////////CONNECT AND READ FUNCTIONS///////
 bool arduinoAcceptConnection() {
   if (connection.status == DISCONNECTED) {
+    Serial.println();
     Serial.println("WAITING FOR CONNECTION");
 
     int connectedLength = strlen(CONNECTED_TEXT);
@@ -76,6 +87,11 @@ bool arduinoAcceptConnection() {
   connection.status = DISCONNECTED;
   setArduinoError(DISCONNECTED_TEXT);
   return false;
+}
+
+bool arduinoClose() {
+  serialFlush();
+  connection.status = DISCONNECTED;
 }
 
 void addNumberToCharArray(int number, char *str) {
@@ -102,18 +118,22 @@ void formatSendData(MyUdpPacket &myUdpPacket, char *packet) {
 
 void sendData(char *dataToSend) {
   myUdpPacket.bNumber = (strlen(dataToSend) / myUdpPacket.bLength) + 1;
-
+  int remainder = strlen(dataToSend) % myUdpPacket.bLength;
   int bLength = myUdpPacket.bLength;
+  int blockLength = bLength;
   for (int blockIndex = 0; blockIndex < myUdpPacket.bNumber; blockIndex++) {
+    if (blockIndex == myUdpPacket.bNumber - 1) {
+      myUdpPacket.bLength = remainder;
+      blockLength = remainder;
+    }
     myUdpPacket.bOffset = blockIndex;
     myUdpPacket.bData = (char *)malloc(sizeof(char) * myUdpPacket.bLength + 1);
     memset(myUdpPacket.bData, '\0', sizeof(char) * myUdpPacket.bLength + 1);
 
-    for (int dataIndex = blockIndex * bLength; dataIndex < blockIndex * bLength + bLength; dataIndex++) {
+    for (int dataIndex = blockIndex * bLength; dataIndex < blockIndex * bLength + blockLength; dataIndex++) {
       int bDataLength = strlen(myUdpPacket.bData);
       myUdpPacket.bData[bDataLength] = dataToSend[dataIndex];
     }
-
     char packet[myUdpPacket.pSize];
     memset(packet, '\0', sizeof(char) * myUdpPacket.pSize);
     formatSendData(myUdpPacket, packet);
@@ -126,7 +146,7 @@ bool udpWrite(char *dataToSend) {
     sendData(dataToSend);
     return true;
   }
-  setArduinoError(DISCONNECTED_TEXT);
+  setArduinoError(WRITE_ERROR_TEXT);
   return false;
 }
 ////////////CONNECT AND READ FUNCTIONS///////
@@ -136,19 +156,22 @@ void setup() {
   Serial.setTimeout(500);
 
   connection.status = DISCONNECTED;
-  myUdpPacket.pSize = 32;
-  myUdpPacket.bLength = 16;
+  myUdpPacket.pSize = BLOCK_SIZE;
+  myUdpPacket.bLength = BLOCK_BODY_SIZE;
 }
 
 char dataToSend[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";
+char dataToSend1[] = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book";
+char optionToSend[] = "1";
+
 void loop() {
   if (!arduinoAcceptConnection()) {
     printLastError();
   }
 
-  if (!udpWrite(dataToSend)) {
+  if (!udpWrite(dataToSend1)) {
     printLastError();
   }
-  delay(5000);
-  //arduinoClose();
+
+  arduinoClose();
 }

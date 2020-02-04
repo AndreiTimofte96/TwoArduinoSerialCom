@@ -9,11 +9,14 @@ enum blockInformation {
 
 char CONNECTED_TEXT[] = "CONNECTED";
 char DISCONNECTED_TEXT[] = "EROARE_LA_CONECTARE";
+char READ_ERROR_TEXT[] = "EROARE_LA_CITIRE";
+char WRITE_ERROR_TEXT[] = "EROARE_LA_SCRIERE";
 char* ARDUINO_ERROR;
 
 enum connectionStatus {
   DISCONNECTED,
   CONNECTED,
+  IDLE,
 };
 
 struct Connection {
@@ -72,6 +75,12 @@ bool arduinoConnect() {
   return false;
 }
 
+bool arduinoClose() {
+  while (1)
+    ;
+  connection.status = IDLE;
+}
+
 void formatReceiveData(MyUdpPacket& myUdpPacket, char* bData, char* dataToReceive) {
   char* pch;
   pch = strtok(bData, ",");
@@ -89,6 +98,7 @@ void formatReceiveData(MyUdpPacket& myUdpPacket, char* bData, char* dataToReceiv
   pch = strtok(NULL, ",");
   myUdpPacket.bData = pch;
 
+  myUdpPacket.bData[myUdpPacket.bLength] = '\0';
   strcat(dataToReceive, myUdpPacket.bData);
 }
 
@@ -115,7 +125,7 @@ bool udpRead(char* dataToReceive) {
     receiveData(dataToReceive);
     return true;
   }
-  setArduinoError(DISCONNECTED_TEXT);
+  setArduinoError(READ_ERROR_TEXT);
   return false;
 }
 ////////////CONNECT AND READ FUNCTIONS///////
@@ -123,8 +133,7 @@ bool udpRead(char* dataToReceive) {
 void setup() {
   Serial.begin(9600);
   Serial.setTimeout(500);
-  Serial.flush();
-  delay(10000);
+  delay(5000);
   connection.status = DISCONNECTED;
 }
 
@@ -139,6 +148,6 @@ void loop() {
   }
   Serial.println("RECEIVED DATA:");
   Serial.println(dataToReceive);
-
-  //arduinoClose();
+  Serial.println("END");
+  arduinoClose();
 }
