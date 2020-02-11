@@ -1,15 +1,11 @@
 #include "udpProtocol.h"
 
-char CONNECTED_TEXT[] = "CONNECTED";
-char DISCONNECTED_TEXT[] = "EROARE_LA_CONECTARE";
-char READ_ERROR_TEXT[] = "EROARE_LA_CITIRE";
-char WRITE_ERROR_TEXT[] = "EROARE_LA_SCRIERE";
-
 UdpProtocol::UdpProtocol() {
   connection.setStatus(Connection::DISCONNECTED);
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
 }
+char CONNECTED_TEXT[] = "CONNECTED";
 
 ///////////////
 void UdpProtocol::waitRead() {
@@ -22,22 +18,21 @@ void UdpProtocol::serialFlush() {
   while (Serial.readBytes(&b, 1) > 0)
     ;
 }
+
+void UdpProtocol::println(char *data) {
+  Serial.println(data);
+}
+
+void UdpProtocol::println(int data) {
+  Serial.println(data);
+}
 ///////////////
 
 //////////////////
-void UdpProtocol::setArduinoError(char *error) {
-  ARDUINO_ERROR = (char *)malloc(sizeof(char) * strlen(error) + 1);
-  memset(ARDUINO_ERROR, '\0', sizeof(char) * strlen(error) + 1);
-  strcpy(ARDUINO_ERROR, error);
-}
-
-char *UdpProtocol::getArduinoError() {
-  return ARDUINO_ERROR;
-}
 
 void UdpProtocol::printLastError() {
   Serial.print("EROARE: ");
-  Serial.println(getArduinoError());
+  Serial.println(error.getError());
 }
 ////////////////////
 
@@ -59,13 +54,15 @@ bool UdpProtocol::arduinoAcceptConnection() {
       return true;
     }
 
-    Serial.write(DISCONNECTED_TEXT, strlen(DISCONNECTED_TEXT));
     connection.setStatus(Connection::DISCONNECTED);
-    setArduinoError(DISCONNECTED_TEXT);
+    error.setError(Error::CONNECTION_ERROR);
+    Serial.write(error.getError(), strlen(error.getError()));
+
     return false;
   }
   connection.setStatus(Connection::DISCONNECTED);
-  setArduinoError(DISCONNECTED_TEXT);
+  error.setError(Error::CONNECTION_ERROR);
+
   return false;
 }
 
@@ -88,11 +85,13 @@ bool UdpProtocol::arduinoConnect() {
 
   connection.setStatus(Connection::DISCONNECTED);
 
-  setArduinoError(DISCONNECTED_TEXT);
+  error.setError(Error::CONNECTION_ERROR);
   return false;
 }
 
 bool UdpProtocol::arduinoServerClose() {
+  while (1)
+    ;
   serialFlush();
   connection.setStatus(Connection::IDLE);
 }
@@ -157,7 +156,7 @@ bool UdpProtocol::udpWrite(char *dataToSend) {
     sendData(dataToSend);
     return true;
   }
-  setArduinoError(WRITE_ERROR_TEXT);
+  error.setError(Error::WRITE_ERROR);
   return false;
 }
 ////////////////////
@@ -208,7 +207,8 @@ bool UdpProtocol::udpRead(char *dataToReceive) {
     receiveData(dataToReceive);
     return true;
   }
-  setArduinoError(READ_ERROR_TEXT);
+  error.setError(Error::READ_ERROR);
+
   return false;
 }
 //////////////

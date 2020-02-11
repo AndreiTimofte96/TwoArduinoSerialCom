@@ -1,11 +1,13 @@
 #include <Arduino.h>
 #include "connection.h"
+#include "error.h"
 #include "udpPacket.h"
 
 class UdpProtocol {
   Connection connection;
   UdpPacket packetRead;
   UdpPacket packetWrite;
+  Error error;
 
   void waitRead();
   void serialFlush();
@@ -17,14 +19,14 @@ class UdpProtocol {
 
   void formatReceiveData(char *bData, char *dataToReceive);
   void receiveData(char *dataToReceive);
+  void println(char string[10000]);
+  void println(int number);
 
   char *ARDUINO_ERROR;
 
  public:
   UdpProtocol();
 
-  char *getArduinoError();
-  void setArduinoError(char *error);
   void printLastError();
 
   bool arduinoAcceptConnection();

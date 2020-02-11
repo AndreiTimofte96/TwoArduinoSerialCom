@@ -10,13 +10,8 @@ void setup() {
 }
 
 char dataToReceive[1000];
-char option[100] = "1";
 void loop() {
   if (!udpProtocol.arduinoConnect()) {
-    udpProtocol.printLastError();
-  }
-
-  if (!udpProtocol.udpWrite(option)) {
     udpProtocol.printLastError();
   }
 
