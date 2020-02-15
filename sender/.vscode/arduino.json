@@ -1,5 +1,5 @@
 {
     "board": "arduino:avr:uno",
-    "port": "COM4",
+    "port": "/dev/ttyACM1",
     "sketch": "sender.ino"
 }
