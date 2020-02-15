@@ -4,10 +4,13 @@
             "name": "Win32",
             "includePath": [
                 "C:\\Program Files\\arduino-1.8.10\\tools\\**",
-                "C:\\Program Files\\arduino-1.8.10\\hardware\\arduino\\avr\\**"
+                "C:\\Program Files\\arduino-1.8.10\\hardware\\arduino\\avr\\**",
+                "/home/timi/Downloads/arduino-1.8.12/hardware/arduino/avr/**",
+                "/home/timi/Downloads/arduino-1.8.12/tools/**"
             ],
             "forcedInclude": [
-                "C:\\Program Files\\arduino-1.8.10\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
+                "C:\\Program Files\\arduino-1.8.10\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h",
+                "/home/timi/Downloads/arduino-1.8.12/hardware/arduino/avr/cores/arduino/Arduino.h"
             ],
             "intelliSenseMode": "msvc-x64",
             "compilerPath": "C:\\MinGW\\bin\\gcc.exe",
