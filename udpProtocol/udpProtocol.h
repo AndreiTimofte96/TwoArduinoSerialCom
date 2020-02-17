@@ -11,6 +11,9 @@ class UdpProtocol {
 
   void waitRead();
   void serialFlush();
+  void computeChecksum(const char *data, UdpPacket &packet);
+  void println(char string[10000]);
+  void println(int number);
 
   void addNumberToCharArray(int number, char *str);
   void addOffsetToCharArray(char *str);
@@ -19,8 +22,6 @@ class UdpProtocol {
 
   void formatReceiveData(char *bData, char *dataToReceive);
   void receiveData(char *dataToReceive);
-  void println(char string[10000]);
-  void println(int number);
 
   char *ARDUINO_ERROR;
 
