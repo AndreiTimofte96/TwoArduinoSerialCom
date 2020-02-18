@@ -7,9 +7,9 @@ class UdpPacket {
   int bLength;
   int bNumber;
   int bOffset;
-  char *bData;
   int checkSum1;
   int checkSum2;
+  char *bData;
 
   enum blockInformation {
     BLOCK_SIZE = 41,

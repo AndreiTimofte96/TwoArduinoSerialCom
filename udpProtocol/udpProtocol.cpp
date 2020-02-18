@@ -6,6 +6,8 @@ UdpProtocol::UdpProtocol() {
 
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
+  // strcpy(specialChr, ",");
+  strcpy(specialChr, "\f");
 }
 char CONNECTED_TEXT[] = "CONNECTED";
 
@@ -29,9 +31,7 @@ void UdpProtocol::println(int data) {
   Serial.println(data);
 }
 
-void computeChecksum(const char *data, int &checkSum1, int &checkSum2) {
-  checkSum1 = 0;
-  checkSum2 = 0;
+void UdpProtocol::computeChecksum(char *data, int &checkSum1, int &checkSum2) {
   for (int index = 0; index < strlen(data); index++) {
     checkSum1 = (checkSum1 + data[index]) % 255;
     checkSum2 += checkSum1 % 255;
@@ -40,7 +40,7 @@ void computeChecksum(const char *data, int &checkSum1, int &checkSum2) {
   checkSum2 %= 255;
 }
 
-bool hasPacketErrors(char *data) {
+bool UdpProtocol::hasPacketErrors(char *data) {
   int checkSum1 = 0, checkSum2 = 0;
   computeChecksum(data, checkSum1, checkSum2);
   if (checkSum1 == packetRead.checkSum1 && checkSum2 == packetRead.checkSum2) {
@@ -129,26 +129,30 @@ bool UdpProtocol::arduinoClose() {
 ////////////////
 void UdpProtocol::addNumberToCharArray(int number, char *str) {
   char aux[100];
-  sprintf(aux, "%d,", number);
+  sprintf(aux, "%d", number);
   strcat(str, aux);
+  strcat(str, specialChr);
 }
 
 void UdpProtocol::addOffsetToCharArray(char *str) {
   int strLength = strlen(str);
   for (int index = strLength; index < UdpPacket::BLOCK_HEADER_SIZE; index++) {
-    str[index] = ',';
+    str[index] = specialChr[0];
   }
 }
 
 void UdpProtocol::formatSendData(char *packet) {
-  computeChecksum(packetWrite.bData, packetWrite.checkSum1, packetWrite.checkSum2);
+  int checkSum1 = packetWrite.checkSum1;
+  int checkSum2 = packetWrite.checkSum2;
+
+  computeChecksum(packetWrite.bData, checkSum1, checkSum2);
 
   addNumberToCharArray(packetWrite.pSize, packet);
   addNumberToCharArray(packetWrite.bLength, packet);
   addNumberToCharArray(packetWrite.bNumber, packet);
   addNumberToCharArray(packetWrite.bOffset, packet);
-  addNumberToCharArray(packetWrite.checkSum1, packet);
-  addNumberToCharArray(packetWrite.checkSum2, packet);
+  addNumberToCharArray(checkSum1, packet);
+  addNumberToCharArray(checkSum2, packet);
   addOffsetToCharArray(packet);
   strcat(packet, packetWrite.bData);
 }
@@ -173,6 +177,7 @@ void UdpProtocol::sendData(char *dataToSend) {
     }
     char packet[packetWrite.pSize];
     memset(packet, '\0', sizeof(char) * packetWrite.pSize);
+
     formatSendData(packet);
     Serial.write(packet, strlen(packet));
   }
@@ -191,25 +196,25 @@ bool UdpProtocol::udpWrite(char *dataToSend) {
 /////////////////////////
 void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   char *pch;
-  pch = strtok(bData, ",");
+  pch = strtok(bData, specialChr);
   packetRead.pSize = atoi(pch);
 
-  pch = strtok(NULL, ",");
+  pch = strtok(NULL, specialChr);
   packetRead.bLength = atoi(pch);
 
-  pch = strtok(NULL, ",");
+  pch = strtok(NULL, specialChr);
   packetRead.bNumber = atoi(pch);
 
-  pch = strtok(NULL, ",");
+  pch = strtok(NULL, specialChr);
   packetRead.bOffset = atoi(pch);
 
-  pch = strtok(NULL, ",");
+  pch = strtok(NULL, specialChr);
   packetRead.checkSum1 = atoi(pch);
 
-  pch = strtok(NULL, ",");
+  pch = strtok(NULL, specialChr);
   packetRead.checkSum2 = atoi(pch);
 
-  pch = strtok(NULL, ",");
+  pch = strtok(NULL, specialChr);
   packetRead.bData = pch;
 
   packetRead.bData[packetRead.bLength] = '\0';
@@ -217,7 +222,9 @@ void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   if (!hasPacketErrors(packetRead.bData)) {
     strcat(dataToReceive, packetRead.bData);
   } else {
-    strcat(dataToReceive, "ERR_PACKET");
+    char err[100];
+    snprintf(err, 100, "ERR_PACKET_%d_%d_[%s]", packetRead.checkSum1, packetRead.checkSum2, packetRead.bData);
+    strcat(dataToReceive, err);
   }
 }
 
