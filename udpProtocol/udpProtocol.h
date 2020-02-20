@@ -8,6 +8,7 @@ class UdpProtocol {
   UdpPacket packetRead;
   UdpPacket packetWrite;
   Error error;
+  HardwareSerial *_Serial;
 
   void waitRead();
   void serialFlush();
@@ -30,6 +31,7 @@ class UdpProtocol {
 
  public:
   UdpProtocol();
+  void initPort(HardwareSerial &Serial, int beginSpeed, int timeout);
 
   void printLastError();
 

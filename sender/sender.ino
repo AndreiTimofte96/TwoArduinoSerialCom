@@ -4,8 +4,9 @@
 UdpProtocol udpProtocol;
 
 void setup() {
-  Serial.begin(9600);
-  Serial.setTimeout(500);
+  //   Serial.begin(9600);
+  //   Serial.setTimeout(500);
+  udpProtocol.initPort(Serial, 9600, 500);
 }
 
 char dataToSend1[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";

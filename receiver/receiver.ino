@@ -4,8 +4,7 @@
 UdpProtocol udpProtocol;
 
 void setup() {
-  Serial.begin(9600);
-  Serial.setTimeout(500);
+  udpProtocol.initPort(Serial, 9600, 500);
   delay(5000);
 }
 
