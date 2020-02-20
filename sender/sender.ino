@@ -6,7 +6,7 @@ UdpProtocol udpProtocol;
 void setup() {
   //   Serial.begin(9600);
   //   Serial.setTimeout(500);
-  udpProtocol.initPort(Serial, 9600, 500);
+  udpProtocol.initPort(Serial, 9600);
 }
 
 char dataToSend1[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";
@@ -20,6 +20,9 @@ void loop() {
   //   if (!udpProtocol.arduinoAcceptConnection()) {
   //     udpProtocol.printLastError();
   //   }
+
+  udpProtocol.getBoardType();
+
   if (!udpProtocol.udpRead(option)) {
     udpProtocol.printLastError();
   }

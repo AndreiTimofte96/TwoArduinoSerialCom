@@ -10,10 +10,14 @@ UdpProtocol::UdpProtocol() {
   strcpy(specialChr, "\f");
 }
 
-void UdpProtocol::initPort(HardwareSerial &Serial, int beginSpeed, int timeout = 1000) {
+void UdpProtocol::initPort(HardwareSerial &Serial, int beginSpeed, int timeout) {
   _Serial = &Serial;
   _Serial->begin(beginSpeed);
   _Serial->setTimeout(timeout);
+}
+
+void UdpProtocol::initPort(HardwareSerial &Serial, int beginSpeed) {
+  initPort(Serial, beginSpeed, 1000);
 }
 
 char CONNECTED_TEXT[] = "CONNECTED";
@@ -263,3 +267,8 @@ bool UdpProtocol::udpRead(char *dataToReceive) {
   return false;
 }
 //////////////
+
+void UdpProtocol::getBoardType() {
+  _Serial->print("Detected board: ");
+  _Serial->println(BOARD);
+}

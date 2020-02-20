@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "boardType.h"
 #include "connection.h"
 #include "error.h"
 #include "udpPacket.h"
@@ -9,6 +10,7 @@ class UdpProtocol {
   UdpPacket packetWrite;
   Error error;
   HardwareSerial *_Serial;
+  BoardType boardType;
 
   void waitRead();
   void serialFlush();
@@ -32,6 +34,7 @@ class UdpProtocol {
  public:
   UdpProtocol();
   void initPort(HardwareSerial &Serial, int beginSpeed, int timeout);
+  void initPort(HardwareSerial &Serial, int beginSpeed);
 
   void printLastError();
 
@@ -43,4 +46,6 @@ class UdpProtocol {
   bool udpWrite(char *dataToSend);
 
   bool udpRead(char *dataToReceive);
+
+  void getBoardType();
 };

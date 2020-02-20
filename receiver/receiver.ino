@@ -9,7 +9,7 @@ void setup() {
 }
 
 char dataToReceive[1000];
-char option[] = "2";
+char option[] = "1";
 void loop() {
   // if (!udpProtocol.arduinoConnect()) {
   //   udpProtocol.printLastError();
@@ -22,7 +22,7 @@ void loop() {
   if (!udpProtocol.udpRead(dataToReceive)) {
     udpProtocol.printLastError();
   }
-  Serial.println("RECEIVED DATA:");
+  Serial.println("\nRECEIVED DATA:");
   Serial.println(dataToReceive);
   Serial.println("END");
   udpProtocol.arduinoClose();
