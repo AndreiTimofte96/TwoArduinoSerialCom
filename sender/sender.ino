@@ -4,8 +4,9 @@
 UdpProtocol udpProtocol;
 
 void setup() {
-    Serial.begin(9600);
-    Serial.setTimeout(500);
+  //   Serial.begin(9600);
+  //   Serial.setTimeout(500);
+  udpProtocol.initPort(Serial, 9600);
 }
 
 char dataToSend1[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";
@@ -16,24 +17,27 @@ char option[10];
 char dataToSend[250];
 
 void loop() {
-    //   if (!udpProtocol.arduinoAcceptConnection()) {
-    //     udpProtocol.printLastError();
-    //   }
-    if (!udpProtocol.udpRead(option)) {
-        udpProtocol.printLastError();
-    }
+  //   if (!udpProtocol.arduinoAcceptConnection()) {
+  //     udpProtocol.printLastError();
+  //   }
 
-    if (strcmp(option, "1") == 0) {
-        strcpy(dataToSend, dataToSend1);
-    }
+  udpProtocol.getBoardType();
 
-    if (strcmp(option, "2") == 0) {
-        strcpy(dataToSend, dataToSend2);
-    }
+  if (!udpProtocol.udpRead(option)) {
+    udpProtocol.printLastError();
+  }
 
-    if (!udpProtocol.udpWrite(dataToSend)) {
-        udpProtocol.printLastError();
-    }
+  if (strcmp(option, "1") == 0) {
+    strcpy(dataToSend, dataToSend1);
+  }
 
-    udpProtocol.arduinoServerClose();
+  if (strcmp(option, "2") == 0) {
+    strcpy(dataToSend, dataToSend2);
+  }
+
+  if (!udpProtocol.udpWrite(dataToSend)) {
+    udpProtocol.printLastError();
+  }
+
+  udpProtocol.arduinoServerClose();
 }
