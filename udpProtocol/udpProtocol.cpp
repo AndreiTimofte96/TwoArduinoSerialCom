@@ -1,13 +1,14 @@
 #include "udpProtocol.h"
 
-UdpProtocol::UdpProtocol() {
+UdpProtocol::UdpProtocol(int rxPort, int txPort) {
+  softwareSerial = new SoftwareSerial(rxPort, txPort);
+  softwareSerial->begin(9600);
+
   // connection.setStatus(Connection::DISCONNECTED);
   connection.setStatus(Connection::CONNECTED);
 
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
-  // strcpy(specialChr, ",");
-  strcpy(specialChr, "\f");
 }
 
 void UdpProtocol::initPort(HardwareSerial &Serial, int beginSpeed, int timeout) {
@@ -24,22 +25,8 @@ char CONNECTED_TEXT[] = "CONNECTED";
 
 ///////////////
 void UdpProtocol::waitRead() {
-  while (!_Serial->available())
+  while (!softwareSerial->available())
     ;
-}
-
-void UdpProtocol::serialFlush() {
-  byte b;
-  while (_Serial->readBytes(&b, 1) > 0)
-    ;
-}
-
-void UdpProtocol::println(char *data) {
-  _Serial->println(data);
-}
-
-void UdpProtocol::println(int data) {
-  _Serial->println(data);
 }
 
 void UdpProtocol::computeChecksum(char *data, int &checkSum1, int &checkSum2) {
@@ -71,62 +58,9 @@ void UdpProtocol::printLastError() {
 ////////////////////
 
 ////////////////////
-bool UdpProtocol::arduinoAcceptConnection() {
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    _Serial->println();
-    _Serial->println("WAITING FOR CONNECTION");
-
-    int connectedLength = strlen(CONNECTED_TEXT);
-    char connected[connectedLength];
-
-    waitRead();
-    _Serial->readBytes(connected, connectedLength);
-
-    if (strcmp(connected, CONNECTED_TEXT) == 0) {
-      _Serial->write(CONNECTED_TEXT, connectedLength);
-      connection.setStatus(Connection::CONNECTED);
-      return true;
-    }
-
-    connection.setStatus(Connection::DISCONNECTED);
-    error.setError(Error::CONNECTION_ERROR);
-    _Serial->write(error.getError(), strlen(error.getError()));
-
-    return false;
-  }
-  connection.setStatus(Connection::DISCONNECTED);
-  error.setError(Error::CONNECTION_ERROR);
-
-  return false;
-}
-
-bool UdpProtocol::arduinoConnect() {
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    _Serial->write(CONNECTED_TEXT, strlen(CONNECTED_TEXT));
-    waitRead();
-
-    int connectedLength = strlen(CONNECTED_TEXT);
-    char connected[connectedLength];
-    _Serial->readBytes(connected, connectedLength);
-    _Serial->println(connected);
-
-    if (strcmp(connected, CONNECTED_TEXT) == 0) {
-      connection.setStatus(Connection::CONNECTED);
-
-      return true;
-    };
-  }
-
-  connection.setStatus(Connection::DISCONNECTED);
-
-  error.setError(Error::CONNECTION_ERROR);
-  return false;
-}
-
 bool UdpProtocol::arduinoServerClose() {
   while (1)
     ;
-  serialFlush();
   connection.setStatus(Connection::IDLE);
 }
 
@@ -184,12 +118,17 @@ void UdpProtocol::sendData(char *dataToSend) {
 
     for (int dataIndex = blockIndex * bLength; dataIndex < blockIndex * bLength + blockLength; dataIndex++) {
       int bDataLength = strlen(packetWrite.bData);
+
       packetWrite.bData[bDataLength] = dataToSend[dataIndex];
     }
     char packet[packetWrite.pSize];
     memset(packet, '\0', sizeof(char) * packetWrite.pSize);
     formatSendData(packet);
-    _Serial->write(packet, strlen(packet));
+
+    softwareSerial->write(packet, strlen(packet));
+    delay(100);
+    _Serial->println();
+    _Serial->println(packet);
   }
 }
 
@@ -238,20 +177,33 @@ void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   }
 }
 
+void UdpProtocol::softwareSerial_readBytes(char *data, int length) {
+  int index;
+  // String str;
+  for (index = 0; index < length; index++) {
+    char c = softwareSerial->read();
+    delay(1);
+
+    if ((int)c == -1) break;
+
+    data[index] = c;
+  }
+  data[index] = '\0';
+}
+
 void UdpProtocol::receiveData(char *dataToReceive) {
   int bDataLength = UdpPacket::BLOCK_SIZE;
   char bData[bDataLength];
 
-  // serialFlush();
   waitRead();
   memset(bData, '\0', sizeof(char) * bDataLength);
-  _Serial->readBytes(bData, bDataLength);
+  softwareSerial_readBytes(bData, bDataLength);
   formatReceiveData(bData, dataToReceive);
 
   while (packetRead.bOffset + 1 < packetRead.bNumber) {
     waitRead();
     memset(bData, '\0', sizeof(char) * bDataLength);
-    _Serial->readBytes(bData, bDataLength);
+    softwareSerial_readBytes(bData, bDataLength);
     formatReceiveData(bData, dataToReceive);
   }
 }

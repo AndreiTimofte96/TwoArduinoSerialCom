@@ -1,20 +1,16 @@
 // 32,16,8,0,Ana are mere si
 #include "udpProtocol.h"
 
-UdpProtocol udpProtocol;
+UdpProtocol udpProtocol(2, 3);
 
 void setup() {
   udpProtocol.initPort(Serial, 9600, 500);
-  delay(5000);
+  delay(2000);
 }
 
 char dataToReceive[1000];
-char option[] = "1";
+char option[] = "2";
 void loop() {
-  // if (!udpProtocol.arduinoConnect()) {
-  //   udpProtocol.printLastError();
-  // }
-
   if (!udpProtocol.udpWrite(option)) {
     udpProtocol.printLastError();
   }
@@ -25,5 +21,6 @@ void loop() {
   Serial.println("\nRECEIVED DATA:");
   Serial.println(dataToReceive);
   Serial.println("END");
+
   udpProtocol.arduinoClose();
 }
