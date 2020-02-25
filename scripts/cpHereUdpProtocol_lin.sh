@@ -1,1 +1,1 @@
-cp -r /home/timi/Arduino/libraries/udpProtocol ../
+cp -r /home/timi/Arduino/libraries/ArduinoSerialCom ../

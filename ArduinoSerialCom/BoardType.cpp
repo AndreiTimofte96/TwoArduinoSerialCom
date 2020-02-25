@@ -1,4 +1,4 @@
-#include "boardType.h"
+#include "BoardType.hpp"
 
 BoardType::BoardType() {
 }

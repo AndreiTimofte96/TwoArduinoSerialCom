@@ -1,32 +1,8 @@
-#include "udpProtocol.h"
+#include "UdpProtocol.hpp"
 
-UdpProtocol::UdpProtocol(int rxPort, int txPort) {
-  softwareSerial = new SoftwareSerial(rxPort, txPort);
-  softwareSerial->begin(9600);
-
-  // connection.setStatus(Connection::DISCONNECTED);
-  connection.setStatus(Connection::CONNECTED);
-
+UdpProtocol::UdpProtocol() {
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
-}
-
-void UdpProtocol::initPort(HardwareSerial &Serial, int beginSpeed, int timeout) {
-  _Serial = &Serial;
-  _Serial->begin(beginSpeed);
-  _Serial->setTimeout(timeout);
-}
-
-void UdpProtocol::initPort(HardwareSerial &Serial, int beginSpeed) {
-  initPort(Serial, beginSpeed, 1000);
-}
-
-char CONNECTED_TEXT[] = "CONNECTED";
-
-///////////////
-void UdpProtocol::waitRead() {
-  while (!softwareSerial->available())
-    ;
 }
 
 void UdpProtocol::computeChecksum(char *data, int &checkSum1, int &checkSum2) {
@@ -47,31 +23,6 @@ bool UdpProtocol::hasPacketErrors(char *data) {
   return true;
 }
 
-///////////////
-
-//////////////////
-
-void UdpProtocol::printLastError() {
-  _Serial->print("EROARE: ");
-  _Serial->println(error.getError());
-}
-////////////////////
-
-////////////////////
-bool UdpProtocol::arduinoServerClose() {
-  while (1)
-    ;
-  connection.setStatus(Connection::IDLE);
-}
-
-bool UdpProtocol::arduinoClose() {
-  while (1)
-    ;
-  connection.setStatus(Connection::IDLE);
-}
-///////////////////////
-
-////////////////
 void UdpProtocol::addNumberToCharArray(int number, char *str) {
   char aux[100];
   sprintf(aux, "%d", number);
@@ -127,8 +78,8 @@ void UdpProtocol::sendData(char *dataToSend) {
 
     softwareSerial->write(packet, strlen(packet));
     delay(100);
-    _Serial->println();
-    _Serial->println(packet);
+    hardwareSerial->println();
+    hardwareSerial->println(packet);
   }
 }
 
@@ -140,9 +91,7 @@ bool UdpProtocol::udpWrite(char *dataToSend) {
   error.setError(Error::WRITE_ERROR);
   return false;
 }
-////////////////////
 
-/////////////////////////
 void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   char *pch;
   pch = strtok(bData, specialChr);
@@ -177,20 +126,6 @@ void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   }
 }
 
-void UdpProtocol::softwareSerial_readBytes(char *data, int length) {
-  int index;
-  // String str;
-  for (index = 0; index < length; index++) {
-    char c = softwareSerial->read();
-    delay(1);
-
-    if ((int)c == -1) break;
-
-    data[index] = c;
-  }
-  data[index] = '\0';
-}
-
 void UdpProtocol::receiveData(char *dataToReceive) {
   int bDataLength = UdpPacket::BLOCK_SIZE;
   char bData[bDataLength];
@@ -217,10 +152,4 @@ bool UdpProtocol::udpRead(char *dataToReceive) {
   error.setError(Error::READ_ERROR);
 
   return false;
-}
-//////////////
-
-void UdpProtocol::getBoardType() {
-  _Serial->print("Detected board: ");
-  _Serial->println(BOARD);
 }
