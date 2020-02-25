@@ -1,2 +1,2 @@
-rm -r /home/timi/Arduino/libraries/udpProtocol*
-cp -r ../udpProtocol /home/timi/Arduino/libraries
+rm -r /home/timi/Arduino/libraries/ArduinoSerialCom*
+cp -r ../ArduinoSerialCom /home/timi/Arduino/libraries

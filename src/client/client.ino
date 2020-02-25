@@ -1,10 +1,12 @@
 // 32,16,8,0,Ana are mere si
-#include "udpProtocol.h"
+#include "UdpProtocol.hpp"
 
-UdpProtocol udpProtocol(2, 3);
+UdpProtocol udpProtocol;
 
 void setup() {
-  udpProtocol.initPort(Serial, 9600, 500);
+  udpProtocol.initializePorts(2, 3);                // RX, TX
+  udpProtocol.initializeSerial(Serial, 9600, 500);  //Serial, baudRate, Serial.setTimeout
+
   delay(2000);
 }
 

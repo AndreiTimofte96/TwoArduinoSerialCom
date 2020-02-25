@@ -1,12 +1,12 @@
-#include "udpProtocol.h"
+// #include "UdpProtocol.h"
+#include "UdpProtocol.hpp"
 // 32,16,8,0,Ana are mere si
 
-UdpProtocol udpProtocol(2, 3);
+UdpProtocol udpProtocol;
 
 void setup() {
-  //   Serial.begin(9600);
-  //   Serial.setTimeout(500);
-  udpProtocol.initPort(Serial, 9600, 500);
+  udpProtocol.initializePorts(2, 3);                // RX, TX
+  udpProtocol.initializeSerial(Serial, 9600, 500);  //Serial, baudRate, Serial.setTimeout
 }
 
 char dataToSendOption1[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";
@@ -16,7 +16,7 @@ char dataToSendOption2[] = "Lorem Ipsum is simply dummy text of the printing and
 char option[10];
 
 void loop() {
-  // udpProtocol.getBoardType();
+  udpProtocol.getBoardType();
 
   if (!udpProtocol.udpRead(option)) {
     udpProtocol.printLastError();
