@@ -1,12 +1,11 @@
-// #include "UdpProtocol.h"
-#include "UdpProtocol.hpp"
+#include <TcpProtocol.hpp>
 // 32,16,8,0,Ana are mere si
 
-UdpProtocol udpProtocol;
+TcpProtocol tcpProtocol;
 
 void setup() {
-  udpProtocol.initializePorts(2, 3);                // RX, TX
-  udpProtocol.initializeSerial(Serial, 9600, 500);  //Serial, baudRate, Serial.setTimeout
+  tcpProtocol.initializePorts(2, 3);                // RX, TX
+  tcpProtocol.initializeSerial(Serial, 9600, 500);  //Serial, baudRate, Serial.setTimeout
 }
 
 char dataToSendOption1[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";
@@ -16,21 +15,21 @@ char dataToSendOption2[] = "Lorem Ipsum is simply dummy text of the printing and
 char option[10];
 
 void loop() {
-  udpProtocol.getBoardType();
+  tcpProtocol.getBoardType();
 
-  if (!udpProtocol.udpRead(option)) {
-    udpProtocol.printLastError();
+  if (!tcpProtocol.read(option)) {
+    tcpProtocol.printLastError();
   }
 
   if (strcmp(option, "2") == 0) {
-    if (!udpProtocol.udpWrite(dataToSendOption2)) {
-      udpProtocol.printLastError();
+    if (!tcpProtocol.write(dataToSendOption2)) {
+      tcpProtocol.printLastError();
     }
   } else {
-    if (!udpProtocol.udpWrite(dataToSendOption1)) {
-      udpProtocol.printLastError();
+    if (!tcpProtocol.write(dataToSendOption1)) {
+      tcpProtocol.printLastError();
     }
   }
 
-  udpProtocol.arduinoServerClose();
+  tcpProtocol.arduinoServerClose();
 }
