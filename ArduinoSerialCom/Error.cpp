@@ -15,6 +15,8 @@ char const* Error::getError() {
       return "EROARE_LA_CITIRE";
     case WRITE_ERROR:
       return "EROARE_LA_SCRIERE";
+    case TCP_CONNECTION_ERROR:
+      return "EROARE_LA_CONECTARE";
     default:
       return "UNKNOWN_ERROR";
   }

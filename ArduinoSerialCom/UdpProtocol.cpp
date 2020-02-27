@@ -1,6 +1,7 @@
 #include "UdpProtocol.hpp"
 
 UdpProtocol::UdpProtocol() {
+  connection.setStatus(Connection::CONNECTED);
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
 }
@@ -83,7 +84,7 @@ void UdpProtocol::sendData(char *dataToSend) {
   }
 }
 
-bool UdpProtocol::udpWrite(char *dataToSend) {
+bool UdpProtocol::write(char *dataToSend) {
   if (connection.getStatus() == Connection::CONNECTED) {
     sendData(dataToSend);
     return true;
@@ -143,7 +144,7 @@ void UdpProtocol::receiveData(char *dataToReceive) {
   }
 }
 
-bool UdpProtocol::udpRead(char *dataToReceive) {
+bool UdpProtocol::read(char *dataToReceive) {
   if (connection.getStatus() == Connection::CONNECTED) {
     memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
     receiveData(dataToReceive);

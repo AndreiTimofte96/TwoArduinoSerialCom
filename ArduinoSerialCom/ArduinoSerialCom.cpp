@@ -1,7 +1,6 @@
 #include "ArduinoSerialCom.hpp"
 
 ArduinoSerialCom::ArduinoSerialCom() {
-  connection.setStatus(Connection::CONNECTED);
 }
 
 void ArduinoSerialCom::initializePorts(int rxPort, int txPort) {

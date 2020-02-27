@@ -17,6 +17,8 @@ char option[10];
 void loop() {
   tcpProtocol.getBoardType();
 
+  tcpProtocol.listen();
+
   if (!tcpProtocol.read(option)) {
     tcpProtocol.printLastError();
   }

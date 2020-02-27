@@ -18,6 +18,6 @@ class UdpProtocol : public ArduinoSerialCom {
 
  public:
   UdpProtocol();
-  bool udpWrite(char *dataToSend);
-  bool udpRead(char *dataToReceive);
+  bool write(char *dataToSend);
+  bool read(char *dataToReceive);
 };
