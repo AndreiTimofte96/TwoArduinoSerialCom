@@ -35,7 +35,8 @@ class ArduinoSerialCom {
   void softwareSerial_readBytes(char *data, int length);
   void waitRead();
 
-  char specialChr[2] = "\f";
+  // char specialChr[2] = "\f";
+  char specialChr[2] = ",";
 
   // arduinoSerialComProtocols protocol;
 };
