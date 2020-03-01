@@ -8,12 +8,6 @@ class TcpProtocol : public ArduinoSerialCom {
   TcpConnection packetConnectionRead;
   TcpConnection packetConnectionWrite;
 
-  void computeChecksum(char *data, int &checkSum1, int &checkSum2);
-  bool hasPacketErrors(char *data);
-
-  void addNumberToCharArray(int number, char *str);
-  void addOffsetToCharArray(char *str, int length);
-
   void formatReceiveData(char *bData, char *dataToReceive);
   void receiveData(char *dataToReceive);
 

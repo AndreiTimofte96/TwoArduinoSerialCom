@@ -62,3 +62,35 @@ void ArduinoSerialCom::softwareSerial_readBytes(char *data, int length) {
   }
   data[index] = '\0';
 }
+
+void ArduinoSerialCom::addNumberToCharArray(int number, char *str) {
+  char aux[10];
+  sprintf(aux, "%d", number);
+  strcat(str, aux);
+  strcat(str, specialChr);
+}
+
+void ArduinoSerialCom::addOffsetToCharArray(char *str, int length) {
+  int strLength = strlen(str);
+  for (int index = strLength; index < length; index++) {
+    str[index] = specialChr[0];
+  }
+}
+
+void ArduinoSerialCom::computeChecksum(char *data, int &checkSum1, int &checkSum2) {
+  for (int index = 0; index < strlen(data); index++) {
+    checkSum1 = (checkSum1 + data[index]) % 255;
+    checkSum2 += checkSum1 % 255;
+  }
+  checkSum1 %= 255;
+  checkSum2 %= 255;
+}
+
+bool ArduinoSerialCom::hasPacketErrors(char *data, int _checkSum1, int _checkSum2) {
+  int checkSum1 = 0, checkSum2 = 0;
+  computeChecksum(data, checkSum1, checkSum2);
+  if (checkSum1 == _checkSum1 && checkSum2 == _checkSum2) {
+    return false;
+  }
+  return true;
+}

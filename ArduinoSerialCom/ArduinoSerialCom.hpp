@@ -34,6 +34,10 @@ class ArduinoSerialCom {
 
   void softwareSerial_readBytes(char *data, int length);
   void waitRead();
+  void addNumberToCharArray(int number, char *str);
+  void addOffsetToCharArray(char *str, int length);
+  void computeChecksum(char *data, int &checkSum1, int &checkSum2);
+  bool hasPacketErrors(char *data, int _checkSum1, int _checkSum2);
 
   // char specialChr[2] = "\f";
   char specialChr[2] = ",";

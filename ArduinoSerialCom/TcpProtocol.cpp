@@ -144,30 +144,7 @@ void TcpProtocol::formatSendConnectionData(char *packet, int packetLength) {
   addOffsetToCharArray(packet, packetLength);
 }
 
-void TcpProtocol::addNumberToCharArray(int number, char *str) {
-  char aux[100];
-  sprintf(aux, "%d", number);
-  strcat(str, aux);
-  strcat(str, specialChr);
-}
-
-void TcpProtocol::addOffsetToCharArray(char *str, int length) {
-  int strLength = strlen(str);
-  for (int index = strLength; index < length; index++) {
-    str[index] = specialChr[0];
-  }
-}
-
 /////////////////////////////////////////////////////////////////////////////////////
-
-void TcpProtocol::computeChecksum(char *data, int &checkSum1, int &checkSum2) {
-  for (int index = 0; index < strlen(data); index++) {
-    checkSum1 = (checkSum1 + data[index]) % 255;
-    checkSum2 += checkSum1 % 255;
-  }
-  checkSum1 %= 255;
-  checkSum2 %= 255;
-}
 
 void TcpProtocol::formatSendData(char *packet, int length) {
   int checkSum1 = packetWrite.checkSum1;
@@ -186,10 +163,13 @@ void TcpProtocol::formatSendData(char *packet, int length) {
 }
 
 void TcpProtocol::sendData(char *dataToSend) {
+  packetWrite.pSize = TcpPacket::BLOCK_SIZE;
+  packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
   packetWrite.bNumber = (strlen(dataToSend) / packetWrite.bLength) + 1;
   int remainder = strlen(dataToSend) % packetWrite.bLength;
   int bLength = packetWrite.bLength;
   int blockLength = bLength;
+
   for (int blockIndex = 0; blockIndex < packetWrite.bNumber; blockIndex++) {
     if (blockIndex == packetWrite.bNumber - 1) {
       packetWrite.bLength = remainder;
@@ -226,15 +206,6 @@ bool TcpProtocol::write(char *dataToSend) {
 
 /////////////////////////////////////////////////////////////
 
-bool TcpProtocol::hasPacketErrors(char *data) {
-  int checkSum1 = 0, checkSum2 = 0;
-  computeChecksum(data, checkSum1, checkSum2);
-  if (checkSum1 == packetRead.checkSum1 && checkSum2 == packetRead.checkSum2) {
-    return false;
-  }
-  return true;
-}
-
 void TcpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   char *pch;
   pch = strtok(bData, specialChr);
@@ -260,7 +231,7 @@ void TcpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
 
   packetRead.bData[packetRead.bLength] = '\0';
 
-  if (!hasPacketErrors(packetRead.bData)) {
+  if (!hasPacketErrors(packetRead.bData, packetRead.checkSum1, packetRead.checkSum2)) {
     strcat(dataToReceive, packetRead.bData);
   } else {
     char err[100];
