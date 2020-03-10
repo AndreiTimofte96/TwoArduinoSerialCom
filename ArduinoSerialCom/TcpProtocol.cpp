@@ -14,8 +14,8 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
     waitRead();
     memset(bData, '\0', sizeof(char) * bDataLength);
     softwareSerial_readBytes(bData, bDataLength);
-    hardwareSerial->println("SERVER READ:");
-    hardwareSerial->println(bData);
+    // hardwareSerial->println("SERVER READ:");
+    // hardwareSerial->println(bData);
 
     formatReceiveConnectionData(bData);
 
@@ -31,14 +31,14 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
       softwareSerial->write(packet, strlen(packet));
       delay(100);
-      hardwareSerial->println("SERVER WRITE:");
-      hardwareSerial->println(packet);
+      // hardwareSerial->println("SERVER WRITE:");
+      // hardwareSerial->println(packet);
 
       waitRead();
       memset(bData, '\0', sizeof(char) * bDataLength);
       softwareSerial_readBytes(bData, bDataLength);
-      hardwareSerial->println("SERVER READ:");
-      hardwareSerial->println(bData);
+      // hardwareSerial->println("SERVER READ:");
+      // hardwareSerial->println(bData);
 
       formatReceiveConnectionData(bData);
 
@@ -62,8 +62,8 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
       softwareSerial->write(packet, strlen(packet));
       delay(100);
-      hardwareSerial->println("SERVER WRITE:");
-      hardwareSerial->println(packet);
+      // hardwareSerial->println("SERVER WRITE:");
+      // hardwareSerial->println(packet);
 
       connection.setStatus(Connection::DISCONNECTED);
       error.setError(Error::TCP_CONNECTION_ERROR);
@@ -85,8 +85,8 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   formatSendConnectionData(packet, packetLength);
 
   softwareSerial->write(packet, strlen(packet));
-  hardwareSerial->println("CLIENT WRITE:");
-  hardwareSerial->println(packet);
+  // hardwareSerial->println("CLIENT WRITE:");
+  // hardwareSerial->println(packet);
   delay(100);
 
   waitRead();
@@ -95,8 +95,8 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   memset(bData, '\0', sizeof(char) * bDataLength);
 
   softwareSerial_readBytes(bData, bDataLength);
-  hardwareSerial->println("CLIENT READ:");
-  hardwareSerial->println(bData);
+  // hardwareSerial->println("CLIENT READ:");
+  // hardwareSerial->println(bData);
 
   formatReceiveConnectionData(bData);
 
@@ -109,8 +109,8 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
     formatSendConnectionData(packet, packetLength);
 
     softwareSerial->write(packet, strlen(packet));
-    hardwareSerial->println("CLIENT WRITE:");
-    hardwareSerial->println(packet);
+    // hardwareSerial->println("CLIENT WRITE:");
+    // hardwareSerial->println(packet);
     delay(100);
 
     hardwareSerial->println("CONNECTION CLIENT SIDE ESTABLISHED");
@@ -165,15 +165,20 @@ void TcpProtocol::formatSendData(char *packet, int length) {
 void TcpProtocol::sendData(char *dataToSend) {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
-  packetWrite.bNumber = (strlen(dataToSend) / packetWrite.bLength) + 1;
+  packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
+  if (strlen(dataToSend) % packetWrite.bLength) {
+    packetWrite.bNumber += 1;
+  }
   int remainder = strlen(dataToSend) % packetWrite.bLength;
   int bLength = packetWrite.bLength;
   int blockLength = bLength;
+  bool SENT_ACK = false;
 
   for (int blockIndex = 0; blockIndex < packetWrite.bNumber; blockIndex++) {
     if (blockIndex == packetWrite.bNumber - 1) {
       packetWrite.bLength = remainder;
       blockLength = remainder;
+      // hardwareSerial->println(remainder);  // BUG DUBIOS
     }
     packetWrite.bOffset = blockIndex;
     packetWrite.bData = (char *)malloc(sizeof(char) * packetWrite.bLength + 1);
@@ -188,10 +193,27 @@ void TcpProtocol::sendData(char *dataToSend) {
     memset(packet, '\0', sizeof(char) * packetWrite.pSize);
     formatSendData(packet, TcpPacket::BLOCK_HEADER_SIZE);
 
-    softwareSerial->write(packet, strlen(packet));
-    delay(100);
-    hardwareSerial->println();
-    hardwareSerial->println(packet);
+    SENT_ACK = false;
+    while (SENT_ACK == false) {
+      softwareSerial->write(packet, strlen(packet));
+      delay(100);
+      hardwareSerial->println();
+      hardwareSerial->println(packet);
+
+      waitRead();
+      int bDataLength = TcpConnection::BLOCK_SIZE;
+      char bData[bDataLength];
+      memset(bData, '\0', sizeof(char) * bDataLength);
+
+      softwareSerial_readBytes(bData, bDataLength);
+      hardwareSerial->println("CLIENT READ:");
+      hardwareSerial->println(bData);
+      formatReceiveConnectionData(bData);
+
+      if (packetConnectionRead.ack == packetWrite.bOffset + 1) {
+        SENT_ACK = true;
+      }
+    }
   }
 }
 
@@ -230,30 +252,49 @@ void TcpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   packetRead.bData = pch;
 
   packetRead.bData[packetRead.bLength] = '\0';
-
-  if (!hasPacketErrors(packetRead.bData, packetRead.checkSum1, packetRead.checkSum2)) {
-    strcat(dataToReceive, packetRead.bData);
-  } else {
-    char err[100];
-    snprintf(err, 100, "ERR_PACKET_%d_%d_[%s]", packetRead.checkSum1, packetRead.checkSum2, packetRead.bData);
-    strcat(dataToReceive, err);
+  int blockLength = TcpPacket::BLOCK_BODY_SIZE;
+  if (packetRead.bOffset == 0) {
+    orderedPackets = (char **)malloc(sizeof(char *) * packetRead.bLength);
+    for (int index = 0; index < packetRead.bLength; index++) {
+      orderedPackets[index] = (char *)malloc(sizeof(char *) * blockLength);
+    }
   }
+  memset(orderedPackets[packetRead.bOffset], '\0', sizeof(char) * blockLength);
+  strcpy(orderedPackets[packetRead.bOffset], packetRead.bData);
 }
 
 void TcpProtocol::receiveData(char *dataToReceive) {
   int bDataLength = TcpPacket::BLOCK_SIZE;
   char bData[bDataLength];
+  int packetLength = TcpConnection::BLOCK_SIZE;
+  char *packet;
+  packet = (char *)malloc(sizeof(char) * packetLength + 1);
 
-  waitRead();
-  memset(bData, '\0', sizeof(char) * bDataLength);
-  softwareSerial_readBytes(bData, bDataLength);
-  formatReceiveData(bData, dataToReceive);
-
-  while (packetRead.bOffset + 1 < packetRead.bNumber) {
+  do {
     waitRead();
     memset(bData, '\0', sizeof(char) * bDataLength);
     softwareSerial_readBytes(bData, bDataLength);
+    hardwareSerial->println("READ:");
+    hardwareSerial->println(bData);
+
     formatReceiveData(bData, dataToReceive);
+
+    packetConnectionWrite.seq = 1;
+    packetConnectionWrite.ack = packetRead.bOffset + 1;
+    packetConnectionWrite.syn = 1;  // /ACK:0, SEQ:1 CON:2 FIN:3
+
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    formatSendConnectionData(packet, packetLength);
+
+    softwareSerial->write(packet, strlen(packet));
+    hardwareSerial->println("CLIENT WRITE:");
+    hardwareSerial->println(packet);
+    delay(100);
+
+  } while (packetRead.bOffset + 1 < packetRead.bNumber);
+
+  for (int index = 0; index < packetRead.bNumber; index++) {
+    strcat(dataToReceive, orderedPackets[index]);
   }
 }
 

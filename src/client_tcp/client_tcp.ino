@@ -10,7 +10,7 @@ void setup() {
   delay(1000);
 }
 
-char dataToReceive[1000];
+char dataToReceive[300];
 char option[] = "2";
 
 void loop() {

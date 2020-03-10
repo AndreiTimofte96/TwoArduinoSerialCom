@@ -25,7 +25,10 @@ void UdpProtocol::formatSendData(char *packet, int length) {
 void UdpProtocol::sendData(char *dataToSend) {
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
-  packetWrite.bNumber = (strlen(dataToSend) / packetWrite.bLength) + 1;
+  packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
+  if (strlen(dataToSend) % packetWrite.bLength) {
+    packetWrite.bNumber += 1;
+  }
   int remainder = strlen(dataToSend) % packetWrite.bLength;
   int bLength = packetWrite.bLength;
   int blockLength = bLength;

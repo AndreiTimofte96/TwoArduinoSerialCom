@@ -7,6 +7,7 @@ class TcpProtocol : public ArduinoSerialCom {
   TcpPacket packetWrite;
   TcpConnection packetConnectionRead;
   TcpConnection packetConnectionWrite;
+  char **orderedPackets;
 
   void formatReceiveData(char *bData, char *dataToReceive);
   void receiveData(char *dataToReceive);

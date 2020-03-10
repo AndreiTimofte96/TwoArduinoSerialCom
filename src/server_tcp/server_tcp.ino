@@ -15,13 +15,15 @@ char dataToSendOption2[] = "Lorem Ipsum is simply dummy text of the printing and
 char option[10];
 
 void loop() {
-  tcpProtocol.getBoardType();
+  // tcpProtocol.getBoardType();
 
   tcpProtocol.listen();
 
   if (!tcpProtocol.read(option)) {
     tcpProtocol.printLastError();
   }
+  // Serial.println("option:");
+  // Serial.println(option);
 
   if (strcmp(option, "2") == 0) {
     if (!tcpProtocol.write(dataToSendOption2)) {
