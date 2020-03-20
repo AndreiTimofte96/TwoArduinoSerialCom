@@ -3,6 +3,7 @@
 TcpProtocol::TcpProtocol() {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
+  connection.setStatus(Connection::CONNECTED);
 }
 
 void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
@@ -162,9 +163,161 @@ void TcpProtocol::formatSendData(char *packet, int length) {
   strcat(packet, packetWrite.bData);
 }
 
+////////////////////// HAMMMING DISTANCE CODE ENCODING METHOD ////////////
+bool TcpProtocol::isPowerOfTwo(int number) {
+  if (number == 0)
+    return false;
+  double log2N = log(number) / log(2);
+  return (ceil(log2N) == floor(log2N));
+}
+
+void TcpProtocol::baseTwoToChar(int *bits, int length, char *str) {
+  int strIndex = 0;
+  for (int index = 1; index <= length;) {
+    int number = 0;
+    for (int bitIndex = 7; bitIndex >= 0; bitIndex--) {
+      if (bits[index] == 1) {
+        number += 1 << bitIndex;
+      }
+      index++;
+    }
+    str[strIndex++] = number;
+  }
+  // str[strlen(str) + 1] = '\n';
+}
+
+void TcpProtocol::charToBaseTwo(char *str, int *bits) {
+  int bitIndex = 1;
+  for (int charIndex = 0; charIndex < strlen(str); charIndex++) {
+    char c = str[charIndex];
+
+    //compute current character in base 2 and add it to str
+    for (int i = 7; i >= 0; i--, bitIndex++) {
+      bits[bitIndex] = (c & (1 << i)) ? 1 : 0;
+    }
+  }
+}
+
+void TcpProtocol::encodeWitHammingDistanceCode(char *dataSendString) {
+  //fill parity bits position with -1 and the rest with 0
+  for (int index = 1; index <= dataSendLength * 8 + parityBits; index++) {
+    if (isPowerOfTwo(index)) {
+      dataSendBits[index] = -1;
+    } else {
+      dataSendBits[index] = 0;
+    }
+  }
+
+  int dataBitsIndex = 1;
+  for (int charIndex = 0; charIndex < strlen(dataSendString); charIndex++) {
+    char c = dataSendString[charIndex];
+
+    //compute current character in base 2 and add it to dataSendBits
+    for (int i = 7; i >= 0; dataBitsIndex++) {
+      if (dataSendBits[dataBitsIndex] != -1) {
+        dataSendBits[dataBitsIndex] = (c & (1 << i)) ? 1 : 0;
+        i--;
+      }
+    }
+  }
+
+  int paritySum;
+  int skipFactor;
+  //compute parityBits value by Hamming Distance Code algorithm
+  for (int index = 1; index <= dataSendBitsLength; index++) {
+    if (dataSendBits[index] == -1) {
+      skipFactor = index - 1;
+      paritySum = 0;
+
+      for (int jindex = index + 1; jindex <= dataSendBitsLength;) {
+        if (skipFactor) {
+          skipFactor--;
+          paritySum += dataSendBits[jindex];
+          jindex++;
+        } else {
+          jindex += index;
+          skipFactor = index;
+        }
+      }
+      dataSendBits[index] = paritySum % 2;
+    }
+  }
+
+  // for (int index = 1; index <= dataSendBitsLength; index++) {
+  //   hardwareSerial->print(dataSendBits[index]);
+  // }
+
+  dataSendEncodedString = (char *)malloc(sizeof(char) * packetWrite.bLength + 1 + 1);
+  memset(dataSendEncodedString, '\0', sizeof(char) * packetWrite.bLength + 1 + 1);
+
+  baseTwoToChar(dataSendBits, dataSendBitsLength, dataSendEncodedString);
+  // Serial.println("encoded string:");
+  // Serial.println(dataSendEncodedString);
+
+  strcpy(dataSendString, dataSendEncodedString);
+}
+
+void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
+  int dataSendEncodedBits[140];
+  for (int index = 0; index < 140; index++) {
+    dataSendEncodedBits[index] = 0;
+  }
+
+  charToBaseTwo(dataSendEncodedString, dataSendEncodedBits);
+
+  for (int index = 1; index <= dataSendBitsLength; index++) {
+    hardwareSerial->print(dataSendEncodedBits[index]);
+  }
+  hardwareSerial->println();
+
+  // int _wrongBit = 27;
+  // dataSendEncodedBits[_wrongBit] = !dataSendEncodedBits[_wrongBit];
+
+  int wrongBit = 0;
+  for (int index = 1; index <= dataSendBitsLength; index++) {
+    if (isPowerOfTwo(index)) {
+      int skipFactor = index - 1;
+      int paritySum = 0;
+      for (int jindex = index + 1; jindex <= dataSendBitsLength;) {
+        if (skipFactor) {
+          skipFactor--;
+          paritySum += dataSendEncodedBits[jindex];
+          jindex++;
+        } else {
+          jindex += index;
+          skipFactor = index;
+        }
+      }
+
+      if (paritySum % 2 != dataSendEncodedBits[index]) {
+        wrongBit += index;
+      }
+    }
+  }
+
+  if (wrongBit) {
+    dataSendEncodedBits[wrongBit] = !dataSendEncodedBits[wrongBit];
+    hardwareSerial->println("WRONG BIT CORRECTED!");
+  }
+
+  int dataReceiveBits[140];
+  int dataBitsReceiveIndex = 1;
+  for (int index = 1; index <= dataSendBitsLength; index++) {
+    if (!isPowerOfTwo(index)) {
+      dataReceiveBits[dataBitsReceiveIndex++] = dataSendEncodedBits[index];
+    }
+  }
+  baseTwoToChar(dataReceiveBits, dataSendLength * 8, dataSendEncodedString);
+
+  // Serial.println("DECODED DATA:");
+  // Serial.println(dataSendEncodedString);
+}
+
+////////////////////// HAMMMING DISTANCE CODE ENCODING METHOD ////////////
+
 void TcpProtocol::sendData(char *dataToSend) {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
-  packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
+  packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE - 1;
   packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
   if (strlen(dataToSend) % packetWrite.bLength) {
     packetWrite.bNumber += 1;
@@ -175,20 +328,27 @@ void TcpProtocol::sendData(char *dataToSend) {
   bool SENT_ACK = false;
 
   for (int blockIndex = 0; blockIndex < packetWrite.bNumber; blockIndex++) {
+    packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE - 1;
     if (blockIndex == packetWrite.bNumber - 1) {
       packetWrite.bLength = remainder;
       blockLength = remainder;
       // hardwareSerial->println(remainder);  // BUG DUBIOS
     }
     packetWrite.bOffset = blockIndex;
-    packetWrite.bData = (char *)malloc(sizeof(char) * packetWrite.bLength + 1);
-    memset(packetWrite.bData, '\0', sizeof(char) * packetWrite.bLength + 1);
+    packetWrite.bData = (char *)malloc(sizeof(char) * packetWrite.bLength + 1 + 1);
+    memset(packetWrite.bData, '\0', sizeof(char) * packetWrite.bLength + 1 + 1);
 
     for (int dataIndex = blockIndex * bLength; dataIndex < blockIndex * bLength + blockLength; dataIndex++) {
       int bDataLength = strlen(packetWrite.bData);
 
       packetWrite.bData[bDataLength] = dataToSend[dataIndex];
     }
+
+    //encode data to send -> packetWrite.bData;
+    hardwareSerial->println(packetWrite.bData);
+    encodeWitHammingDistanceCode(packetWrite.bData);
+    packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
+
     char packet[packetWrite.pSize];
     memset(packet, '\0', sizeof(char) * packetWrite.pSize);
     formatSendData(packet, TcpPacket::BLOCK_HEADER_SIZE);
@@ -196,7 +356,7 @@ void TcpProtocol::sendData(char *dataToSend) {
     SENT_ACK = false;
     while (SENT_ACK == false) {
       softwareSerial->write(packet, strlen(packet));
-      delay(100);
+      delay(1000);
       hardwareSerial->println();
       hardwareSerial->println(packet);
 
@@ -228,13 +388,13 @@ bool TcpProtocol::write(char *dataToSend) {
 
 /////////////////////////////////////////////////////////////
 
-void TcpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
+void TcpProtocol::formatReceiveData(char *bData) {
   char *pch;
   pch = strtok(bData, specialChr);
   packetRead.pSize = atoi(pch);
 
   pch = strtok(NULL, specialChr);
-  packetRead.bLength = atoi(pch);
+  packetRead.bLength = atoi(pch) - 1;  // removing the parityBits
 
   pch = strtok(NULL, specialChr);
   packetRead.bNumber = atoi(pch);
@@ -251,8 +411,11 @@ void TcpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   pch = strtok(NULL, specialChr);
   packetRead.bData = pch;
 
+  decodeWitHammingDistanceCode(packetRead.bData);
+
   packetRead.bData[packetRead.bLength] = '\0';
-  int blockLength = TcpPacket::BLOCK_BODY_SIZE;
+  int blockLength = TcpPacket::BLOCK_BODY_SIZE - 1;
+
   if (packetRead.bOffset == 0) {
     orderedPackets = (char **)malloc(sizeof(char *) * packetRead.bLength);
     for (int index = 0; index < packetRead.bLength; index++) {
@@ -277,7 +440,7 @@ void TcpProtocol::receiveData(char *dataToReceive) {
     hardwareSerial->println("READ:");
     hardwareSerial->println(bData);
 
-    formatReceiveData(bData, dataToReceive);
+    formatReceiveData(bData);
 
     packetConnectionWrite.seq = 1;
     packetConnectionWrite.ack = packetRead.bOffset + 1;
