@@ -4,9 +4,9 @@ class TcpPacket {
   TcpPacket();
 
   int pSize;
-  int bLength;
-  int bNumber;
-  int bOffset;
+  int bLength;  //length of a block: eg: 16 bytes or if it last block != 16 bytes
+  int bNumber;  //number of blocks of the packet
+  int bOffset;  // offset of block x / bNumber
   int checkSum1;
   int checkSum2;
   char *bData;

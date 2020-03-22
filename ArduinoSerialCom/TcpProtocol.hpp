@@ -11,11 +11,6 @@ class TcpProtocol : public ArduinoSerialCom {
   char **orderedPackets;
   char *dataSendEncodedString;
 
-  int dataSendBits[140];  // 128 bits  + 8 parityBits => 136 bits -> fix 17 bytes
-  int dataSendLength = TcpPacket::BLOCK_BODY_SIZE - 1;
-  int parityBits = 8;
-  int dataSendBitsLength = parityBits + dataSendLength * 8;
-
   void formatReceiveData(char *bData);
   void receiveData(char *dataToReceive);
 

@@ -3,7 +3,6 @@
 TcpProtocol::TcpProtocol() {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
-  connection.setStatus(Connection::CONNECTED);
 }
 
 void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
@@ -15,8 +14,6 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
     waitRead();
     memset(bData, '\0', sizeof(char) * bDataLength);
     softwareSerial_readBytes(bData, bDataLength);
-    // hardwareSerial->println("SERVER READ:");
-    // hardwareSerial->println(bData);
 
     formatReceiveConnectionData(bData);
 
@@ -32,14 +29,10 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
       softwareSerial->write(packet, strlen(packet));
       delay(100);
-      // hardwareSerial->println("SERVER WRITE:");
-      // hardwareSerial->println(packet);
 
       waitRead();
       memset(bData, '\0', sizeof(char) * bDataLength);
       softwareSerial_readBytes(bData, bDataLength);
-      // hardwareSerial->println("SERVER READ:");
-      // hardwareSerial->println(bData);
 
       formatReceiveConnectionData(bData);
 
@@ -63,8 +56,6 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
       softwareSerial->write(packet, strlen(packet));
       delay(100);
-      // hardwareSerial->println("SERVER WRITE:");
-      // hardwareSerial->println(packet);
 
       connection.setStatus(Connection::DISCONNECTED);
       error.setError(Error::TCP_CONNECTION_ERROR);
@@ -86,8 +77,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   formatSendConnectionData(packet, packetLength);
 
   softwareSerial->write(packet, strlen(packet));
-  // hardwareSerial->println("CLIENT WRITE:");
-  // hardwareSerial->println(packet);
+
   delay(100);
 
   waitRead();
@@ -96,8 +86,6 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   memset(bData, '\0', sizeof(char) * bDataLength);
 
   softwareSerial_readBytes(bData, bDataLength);
-  // hardwareSerial->println("CLIENT READ:");
-  // hardwareSerial->println(bData);
 
   formatReceiveConnectionData(bData);
 
@@ -110,8 +98,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
     formatSendConnectionData(packet, packetLength);
 
     softwareSerial->write(packet, strlen(packet));
-    // hardwareSerial->println("CLIENT WRITE:");
-    // hardwareSerial->println(packet);
+    free(packet);
     delay(100);
 
     hardwareSerial->println("CONNECTION CLIENT SIDE ESTABLISHED");
@@ -199,6 +186,11 @@ void TcpProtocol::charToBaseTwo(char *str, int *bits) {
 }
 
 void TcpProtocol::encodeWitHammingDistanceCode(char *dataSendString) {
+  int dataSendBits[140];  // 128 bits  + 8 parityBits => 136 bits -> fix 17 bytes
+  int dataSendLength = TcpPacket::BLOCK_BODY_SIZE - 1;
+  int parityBits = 8;
+  int dataSendBitsLength = parityBits + dataSendLength * 8;
+
   //fill parity bits position with -1 and the rest with 0
   for (int index = 1; index <= dataSendLength * 8 + parityBits; index++) {
     if (isPowerOfTwo(index)) {
@@ -243,32 +235,27 @@ void TcpProtocol::encodeWitHammingDistanceCode(char *dataSendString) {
     }
   }
 
-  // for (int index = 1; index <= dataSendBitsLength; index++) {
-  //   hardwareSerial->print(dataSendBits[index]);
-  // }
-
   dataSendEncodedString = (char *)malloc(sizeof(char) * packetWrite.bLength + 1 + 1);
   memset(dataSendEncodedString, '\0', sizeof(char) * packetWrite.bLength + 1 + 1);
 
   baseTwoToChar(dataSendBits, dataSendBitsLength, dataSendEncodedString);
-  // Serial.println("encoded string:");
-  // Serial.println(dataSendEncodedString);
 
   strcpy(dataSendString, dataSendEncodedString);
+
+  free(dataSendEncodedString);
 }
 
 void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
   int dataSendEncodedBits[140];
+  int dataSendLength = TcpPacket::BLOCK_BODY_SIZE - 1;
+  int parityBits = 8;
+  int dataSendBitsLength = parityBits + dataSendLength * 8;
+
   for (int index = 0; index < 140; index++) {
     dataSendEncodedBits[index] = 0;
   }
 
   charToBaseTwo(dataSendEncodedString, dataSendEncodedBits);
-
-  for (int index = 1; index <= dataSendBitsLength; index++) {
-    hardwareSerial->print(dataSendEncodedBits[index]);
-  }
-  hardwareSerial->println();
 
   // int _wrongBit = 27;
   // dataSendEncodedBits[_wrongBit] = !dataSendEncodedBits[_wrongBit];
@@ -308,9 +295,6 @@ void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
     }
   }
   baseTwoToChar(dataReceiveBits, dataSendLength * 8, dataSendEncodedString);
-
-  // Serial.println("DECODED DATA:");
-  // Serial.println(dataSendEncodedString);
 }
 
 ////////////////////// HAMMMING DISTANCE CODE ENCODING METHOD ////////////
@@ -319,26 +303,28 @@ void TcpProtocol::sendData(char *dataToSend) {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE - 1;
   packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
-  if (strlen(dataToSend) % packetWrite.bLength) {
-    packetWrite.bNumber += 1;
-  }
+
   int remainder = strlen(dataToSend) % packetWrite.bLength;
-  int bLength = packetWrite.bLength;
-  int blockLength = bLength;
+  if (remainder) {
+    packetWrite.bNumber += 1;
+    remainder += 1;  //adding the parityBits -> 1 byte
+  }
+  int bLengthCopy = packetWrite.bLength;
+  int currentOffset = bLengthCopy;
   bool SENT_ACK = false;
 
   for (int blockIndex = 0; blockIndex < packetWrite.bNumber; blockIndex++) {
     packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE - 1;
-    if (blockIndex == packetWrite.bNumber - 1) {
+    if (blockIndex == packetWrite.bNumber - 1 && remainder) {
       packetWrite.bLength = remainder;
-      blockLength = remainder;
+      currentOffset = remainder;
       // hardwareSerial->println(remainder);  // BUG DUBIOS
     }
     packetWrite.bOffset = blockIndex;
     packetWrite.bData = (char *)malloc(sizeof(char) * packetWrite.bLength + 1 + 1);
     memset(packetWrite.bData, '\0', sizeof(char) * packetWrite.bLength + 1 + 1);
 
-    for (int dataIndex = blockIndex * bLength; dataIndex < blockIndex * bLength + blockLength; dataIndex++) {
+    for (int dataIndex = blockIndex * bLengthCopy; dataIndex < blockIndex * bLengthCopy + currentOffset; dataIndex++) {
       int bDataLength = strlen(packetWrite.bData);
 
       packetWrite.bData[bDataLength] = dataToSend[dataIndex];
@@ -347,7 +333,13 @@ void TcpProtocol::sendData(char *dataToSend) {
     //encode data to send -> packetWrite.bData;
     hardwareSerial->println(packetWrite.bData);
     encodeWitHammingDistanceCode(packetWrite.bData);
-    packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
+    hardwareSerial->println(packetWrite.bData);
+
+    if (blockIndex == packetWrite.bNumber - 1 && remainder) {
+      packetWrite.bLength = remainder;
+    } else {
+      packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
+    }
 
     char packet[packetWrite.pSize];
     memset(packet, '\0', sizeof(char) * packetWrite.pSize);
@@ -356,7 +348,7 @@ void TcpProtocol::sendData(char *dataToSend) {
     SENT_ACK = false;
     while (SENT_ACK == false) {
       softwareSerial->write(packet, strlen(packet));
-      delay(1000);
+      delay(100);
       hardwareSerial->println();
       hardwareSerial->println(packet);
 
@@ -372,6 +364,7 @@ void TcpProtocol::sendData(char *dataToSend) {
 
       if (packetConnectionRead.ack == packetWrite.bOffset + 1) {
         SENT_ACK = true;
+        free(packetWrite.bData);
       }
     }
   }
@@ -414,24 +407,25 @@ void TcpProtocol::formatReceiveData(char *bData) {
   decodeWitHammingDistanceCode(packetRead.bData);
 
   packetRead.bData[packetRead.bLength] = '\0';
-  int blockLength = TcpPacket::BLOCK_BODY_SIZE - 1;
 
   if (packetRead.bOffset == 0) {
-    orderedPackets = (char **)malloc(sizeof(char *) * packetRead.bLength);
-    for (int index = 0; index < packetRead.bLength; index++) {
-      orderedPackets[index] = (char *)malloc(sizeof(char *) * blockLength);
+    orderedPackets = (char **)malloc(sizeof(char *) * packetRead.bNumber);
+    for (int index = 0; index < packetRead.bNumber; index++) {
+      orderedPackets[index] = (char *)malloc(sizeof(char *) * packetRead.bLength + 2);
+      memset(orderedPackets[index], '\0', sizeof(char) * packetRead.bLength + 2);
     }
   }
-  memset(orderedPackets[packetRead.bOffset], '\0', sizeof(char) * blockLength);
+
   strcpy(orderedPackets[packetRead.bOffset], packetRead.bData);
+  hardwareSerial->println(orderedPackets[packetRead.bOffset]);
 }
 
 void TcpProtocol::receiveData(char *dataToReceive) {
   int bDataLength = TcpPacket::BLOCK_SIZE;
   char bData[bDataLength];
   int packetLength = TcpConnection::BLOCK_SIZE;
-  char *packet;
-  packet = (char *)malloc(sizeof(char) * packetLength + 1);
+  char *connectionPacket;
+  connectionPacket = (char *)malloc(sizeof(char) * packetLength + 1);
 
   do {
     waitRead();
@@ -446,19 +440,23 @@ void TcpProtocol::receiveData(char *dataToReceive) {
     packetConnectionWrite.ack = packetRead.bOffset + 1;
     packetConnectionWrite.syn = 1;  // /ACK:0, SEQ:1 CON:2 FIN:3
 
-    memset(packet, '\0', sizeof(char) * packetLength + 1);
-    formatSendConnectionData(packet, packetLength);
+    memset(connectionPacket, '\0', sizeof(char) * packetLength + 1);
+    formatSendConnectionData(connectionPacket, packetLength);
 
-    softwareSerial->write(packet, strlen(packet));
+    softwareSerial->write(connectionPacket, strlen(connectionPacket));
     hardwareSerial->println("CLIENT WRITE:");
-    hardwareSerial->println(packet);
+    hardwareSerial->println(connectionPacket);
     delay(100);
 
   } while (packetRead.bOffset + 1 < packetRead.bNumber);
 
+  free(connectionPacket);
+
   for (int index = 0; index < packetRead.bNumber; index++) {
     strcat(dataToReceive, orderedPackets[index]);
+    free(orderedPackets[index]);
   }
+  free(orderedPackets);
 }
 
 bool TcpProtocol::read(char *dataToReceive) {
