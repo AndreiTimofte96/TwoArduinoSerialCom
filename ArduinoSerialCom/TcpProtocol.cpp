@@ -1,5 +1,7 @@
 #include "TcpProtocol.hpp"
 
+int ok = true;
+
 TcpProtocol::TcpProtocol() {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
@@ -36,7 +38,8 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
       formatReceiveConnectionData(bData);
 
-      if (packetConnectionRead.seq == packetConnectionWrite.ack && packetConnectionRead.ack == packetConnectionWrite.seq + 1 && packetConnectionRead.syn == 0) {
+      if (packetConnectionRead.seq == packetConnectionWrite.ack &&
+          packetConnectionRead.ack == packetConnectionWrite.seq + 1 && packetConnectionRead.syn == 0) {
         connectionEstablished = true;
         connection.setStatus(Connection::CONNECTED);
         hardwareSerial->println("CONNECTION SERVER SIDE ESTABLISHED");
@@ -46,7 +49,7 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
       }
     } else {
       packetConnectionWrite.seq = 1;
-      packetConnectionWrite.syn = 9999;  // /ACK:0, SYN:1 FIN:2 ERR: 9999
+      packetConnectionWrite.syn = 9999;  // /ACK:0, SYN:1 CON:2 FIN:3 ERR: 9999
       packetConnectionWrite.ack = 0;
 
       int packetLength = TcpConnection::BLOCK_SIZE;
@@ -89,7 +92,8 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
 
   formatReceiveConnectionData(bData);
 
-  if (packetConnectionRead.syn == 1 && packetConnectionRead.ack == packetConnectionWrite.seq + 1) {
+  if (packetConnectionRead.syn == 1 &&
+      packetConnectionRead.ack == packetConnectionWrite.seq + 1) {
     packetConnectionWrite.seq = packetConnectionRead.ack;
     packetConnectionWrite.ack = packetConnectionRead.seq + 1;
     packetConnectionWrite.syn = 0;  // /ACK:0, SEQ:1 CON:2 FIN:3
@@ -134,12 +138,7 @@ void TcpProtocol::formatSendConnectionData(char *packet, int packetLength) {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-void TcpProtocol::formatSendData(char *packet, int length) {
-  int checkSum1 = packetWrite.checkSum1;
-  int checkSum2 = packetWrite.checkSum2;
-
-  computeChecksum(packetWrite.bData, checkSum1, checkSum2);
-
+void TcpProtocol::formatSendData(char *packet, int length, int checkSum1, int checkSum2) {
   addNumberToCharArray(packetWrite.pSize, packet);
   addNumberToCharArray(packetWrite.bLength, packet);
   addNumberToCharArray(packetWrite.bNumber, packet);
@@ -257,8 +256,13 @@ void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
 
   charToBaseTwo(dataSendEncodedString, dataSendEncodedBits);
 
-  // int _wrongBit = 27;
-  // dataSendEncodedBits[_wrongBit] = !dataSendEncodedBits[_wrongBit];
+  // TO SEE IF THE ERROR HANDLING MECHANISM REALLY WORKS
+  // if (packetRead.bOffset == 2 && ok) {
+  //   int _wrongBit = 27;
+  //   ok = false;
+  //   dataSendEncodedBits[_wrongBit] = !dataSendEncodedBits[_wrongBit];
+  //   dataSendEncodedBits[_wrongBit + 3] = !dataSendEncodedBits[_wrongBit + 3];
+  // }
 
   int wrongBit = 0;
   for (int index = 1; index <= dataSendBitsLength; index++) {
@@ -330,6 +334,11 @@ void TcpProtocol::sendData(char *dataToSend) {
       packetWrite.bData[bDataLength] = dataToSend[dataIndex];
     }
 
+    //computeCheckSums
+    int checkSum1 = 0, checkSum2 = 0;
+    computeChecksum(packetWrite.bData, checkSum1, checkSum2);
+    /////
+
     //encode data to send -> packetWrite.bData;
     hardwareSerial->println(packetWrite.bData);
     encodeWitHammingDistanceCode(packetWrite.bData);
@@ -343,7 +352,7 @@ void TcpProtocol::sendData(char *dataToSend) {
 
     char packet[packetWrite.pSize];
     memset(packet, '\0', sizeof(char) * packetWrite.pSize);
-    formatSendData(packet, TcpPacket::BLOCK_HEADER_SIZE);
+    formatSendData(packet, TcpPacket::BLOCK_HEADER_SIZE, checkSum1, checkSum2);
 
     SENT_ACK = false;
     while (SENT_ACK == false) {
@@ -353,19 +362,20 @@ void TcpProtocol::sendData(char *dataToSend) {
       hardwareSerial->println(packet);
 
       waitRead();
-      int bDataLength = TcpConnection::BLOCK_SIZE;
-      char bData[bDataLength];
-      memset(bData, '\0', sizeof(char) * bDataLength);
+      int bDataConnectionLength = TcpConnection::BLOCK_SIZE;
+      char bDataConnection[bDataConnectionLength];
+      memset(bDataConnection, '\0', sizeof(char) * bDataConnectionLength);
 
-      softwareSerial_readBytes(bData, bDataLength);
+      softwareSerial_readBytes(bDataConnection, bDataConnectionLength);
       hardwareSerial->println("CLIENT READ:");
-      hardwareSerial->println(bData);
-      formatReceiveConnectionData(bData);
+      hardwareSerial->println(bDataConnection);
+      formatReceiveConnectionData(bDataConnection);
 
-      if (packetConnectionRead.ack == packetWrite.bOffset + 1) {
+      if (packetConnectionRead.ack == packetWrite.bOffset + 1 && packetConnectionRead.syn == 1) {
         SENT_ACK = true;
         free(packetWrite.bData);
       }
+      packet[packetWrite.pSize] = '\0';  // BUG CIUDAT
     }
   }
 }
@@ -381,7 +391,7 @@ bool TcpProtocol::write(char *dataToSend) {
 
 /////////////////////////////////////////////////////////////
 
-void TcpProtocol::formatReceiveData(char *bData) {
+bool TcpProtocol::formatReceiveData(char *bData) {
   char *pch;
   pch = strtok(bData, specialChr);
   packetRead.pSize = atoi(pch);
@@ -405,8 +415,14 @@ void TcpProtocol::formatReceiveData(char *bData) {
   packetRead.bData = pch;
 
   decodeWitHammingDistanceCode(packetRead.bData);
-
   packetRead.bData[packetRead.bLength] = '\0';
+
+  int checkSum1 = 0, checkSum2 = 0;
+  computeChecksum(packetRead.bData, checkSum1, checkSum2);
+  if (checkSum1 != packetRead.checkSum1 || checkSum2 != packetRead.checkSum2) {
+    hardwareSerial->println("ERROR! RESEND PACKET");
+    return false;
+  }
 
   if (packetRead.bOffset == 0) {
     orderedPackets = (char **)malloc(sizeof(char *) * packetRead.bNumber);
@@ -418,6 +434,7 @@ void TcpProtocol::formatReceiveData(char *bData) {
 
   strcpy(orderedPackets[packetRead.bOffset], packetRead.bData);
   hardwareSerial->println(orderedPackets[packetRead.bOffset]);
+  return true;
 }
 
 void TcpProtocol::receiveData(char *dataToReceive) {
@@ -434,11 +451,11 @@ void TcpProtocol::receiveData(char *dataToReceive) {
     hardwareSerial->println("READ:");
     hardwareSerial->println(bData);
 
-    formatReceiveData(bData);
+    bool isPacketOk = formatReceiveData(bData);
 
     packetConnectionWrite.seq = 1;
     packetConnectionWrite.ack = packetRead.bOffset + 1;
-    packetConnectionWrite.syn = 1;  // /ACK:0, SEQ:1 CON:2 FIN:3
+    packetConnectionWrite.syn = isPacketOk ? 1 : 9;  // /ACK:0, SYN:1 CON:2 FIN:3 ERR: 9999
 
     memset(connectionPacket, '\0', sizeof(char) * packetLength + 1);
     formatSendConnectionData(connectionPacket, packetLength);

@@ -11,13 +11,13 @@ class TcpProtocol : public ArduinoSerialCom {
   char **orderedPackets;
   char *dataSendEncodedString;
 
-  void formatReceiveData(char *bData);
+  bool formatReceiveData(char *bData);
   void receiveData(char *dataToReceive);
 
   void formatSendConnectionData(char *packet, int packetLength);
   void formatReceiveConnectionData(char *bData);
 
-  void formatSendData(char *packet, int length);
+  void formatSendData(char *packet, int length, int checkSum1, int checkSum2);
   void sendData(char *dataToSend);
 
   void encodeWitHammingDistanceCode(char *dataSendString);
