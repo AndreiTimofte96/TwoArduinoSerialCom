@@ -13,11 +13,11 @@ void setup() {
 char dataToReceive[1000];
 char option[] = "2";
 void loop() {
-  if (!udpProtocol.udpWrite(option)) {
+  if (!udpProtocol.write(option)) {
     udpProtocol.printLastError();
   }
 
-  if (!udpProtocol.udpRead(dataToReceive)) {
+  if (!udpProtocol.read(dataToReceive)) {
     udpProtocol.printLastError();
   }
   Serial.println("\nRECEIVED DATA:");

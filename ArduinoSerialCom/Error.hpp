@@ -8,6 +8,8 @@ class Error {
     CONNECTION_ERROR,
     READ_ERROR,
     WRITE_ERROR,
+
+    TCP_CONNECTION_ERROR,
   };
 
   void setError(errorMessages _error);

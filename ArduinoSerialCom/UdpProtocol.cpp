@@ -1,43 +1,12 @@
 #include "UdpProtocol.hpp"
 
 UdpProtocol::UdpProtocol() {
+  connection.setStatus(Connection::CONNECTED);
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
 }
 
-void UdpProtocol::computeChecksum(char *data, int &checkSum1, int &checkSum2) {
-  for (int index = 0; index < strlen(data); index++) {
-    checkSum1 = (checkSum1 + data[index]) % 255;
-    checkSum2 += checkSum1 % 255;
-  }
-  checkSum1 %= 255;
-  checkSum2 %= 255;
-}
-
-bool UdpProtocol::hasPacketErrors(char *data) {
-  int checkSum1 = 0, checkSum2 = 0;
-  computeChecksum(data, checkSum1, checkSum2);
-  if (checkSum1 == packetRead.checkSum1 && checkSum2 == packetRead.checkSum2) {
-    return false;
-  }
-  return true;
-}
-
-void UdpProtocol::addNumberToCharArray(int number, char *str) {
-  char aux[100];
-  sprintf(aux, "%d", number);
-  strcat(str, aux);
-  strcat(str, specialChr);
-}
-
-void UdpProtocol::addOffsetToCharArray(char *str) {
-  int strLength = strlen(str);
-  for (int index = strLength; index < UdpPacket::BLOCK_HEADER_SIZE; index++) {
-    str[index] = specialChr[0];
-  }
-}
-
-void UdpProtocol::formatSendData(char *packet) {
+void UdpProtocol::formatSendData(char *packet, int length) {
   int checkSum1 = packetWrite.checkSum1;
   int checkSum2 = packetWrite.checkSum2;
 
@@ -49,12 +18,17 @@ void UdpProtocol::formatSendData(char *packet) {
   addNumberToCharArray(packetWrite.bOffset, packet);
   addNumberToCharArray(checkSum1, packet);
   addNumberToCharArray(checkSum2, packet);
-  addOffsetToCharArray(packet);
+  addOffsetToCharArray(packet, length);
   strcat(packet, packetWrite.bData);
 }
 
 void UdpProtocol::sendData(char *dataToSend) {
-  packetWrite.bNumber = (strlen(dataToSend) / packetWrite.bLength) + 1;
+  packetWrite.pSize = UdpPacket::BLOCK_SIZE;
+  packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
+  packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
+  if (strlen(dataToSend) % packetWrite.bLength) {
+    packetWrite.bNumber += 1;
+  }
   int remainder = strlen(dataToSend) % packetWrite.bLength;
   int bLength = packetWrite.bLength;
   int blockLength = bLength;
@@ -74,7 +48,7 @@ void UdpProtocol::sendData(char *dataToSend) {
     }
     char packet[packetWrite.pSize];
     memset(packet, '\0', sizeof(char) * packetWrite.pSize);
-    formatSendData(packet);
+    formatSendData(packet, UdpPacket::BLOCK_HEADER_SIZE);
 
     softwareSerial->write(packet, strlen(packet));
     delay(100);
@@ -83,7 +57,7 @@ void UdpProtocol::sendData(char *dataToSend) {
   }
 }
 
-bool UdpProtocol::udpWrite(char *dataToSend) {
+bool UdpProtocol::write(char *dataToSend) {
   if (connection.getStatus() == Connection::CONNECTED) {
     sendData(dataToSend);
     return true;
@@ -117,7 +91,7 @@ void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
 
   packetRead.bData[packetRead.bLength] = '\0';
 
-  if (!hasPacketErrors(packetRead.bData)) {
+  if (!hasPacketErrors(packetRead.bData, packetRead.checkSum1, packetRead.checkSum2)) {
     strcat(dataToReceive, packetRead.bData);
   } else {
     char err[100];
@@ -143,7 +117,7 @@ void UdpProtocol::receiveData(char *dataToReceive) {
   }
 }
 
-bool UdpProtocol::udpRead(char *dataToReceive) {
+bool UdpProtocol::read(char *dataToReceive) {
   if (connection.getStatus() == Connection::CONNECTED) {
     memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
     receiveData(dataToReceive);
