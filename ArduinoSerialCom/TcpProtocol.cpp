@@ -7,9 +7,10 @@ TcpProtocol::TcpProtocol() {
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
 }
 
-void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
+int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
   int bDataLength = TcpConnection::BLOCK_SIZE;
   char bData[bDataLength];
+  int clientUAID = -1;
 
   bool connectionEstablished = false;
   while (connectionEstablished == false) {
@@ -18,6 +19,8 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
     softwareSerial_readBytes(bData, bDataLength);
 
     formatReceiveConnectionData(bData);
+
+    clientUAID = packetConnectionRead.seq;
 
     if (packetConnectionRead.syn == 1 && packetConnectionRead.ack == 0) {
       packetConnectionWrite.seq = 5001;
@@ -30,6 +33,7 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
       formatSendConnectionData(packet, packetLength);
 
       softwareSerial->write(packet, strlen(packet));
+
       delay(100);
 
       waitRead();
@@ -42,7 +46,8 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
           packetConnectionRead.ack == packetConnectionWrite.seq + 1 && packetConnectionRead.syn == 0) {
         connectionEstablished = true;
         connection.setStatus(Connection::CONNECTED);
-        hardwareSerial->println("CONNECTION SERVER SIDE ESTABLISHED");
+        hardwareSerial->print("CONNECTION SERVER SIDE ESTABLISHED: ");
+        hardwareSerial->println(clientUAID);
       } else {
         connection.setStatus(Connection::DISCONNECTED);
         error.setError(Error::TCP_CONNECTION_ERROR);
@@ -58,17 +63,20 @@ void TcpProtocol::listen() {  // THREE WAY HANDSHAKE
       formatSendConnectionData(packet, packetLength);
 
       softwareSerial->write(packet, strlen(packet));
+
       delay(100);
 
       connection.setStatus(Connection::DISCONNECTED);
       error.setError(Error::TCP_CONNECTION_ERROR);
     }
   }
+  return clientUAID;
 }
 
 bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
+  int UAID = getUniqueArduinoIDFromEEEPROM();
 
-  packetConnectionWrite.seq = 9001;
+  packetConnectionWrite.seq = UAID;
   packetConnectionWrite.ack = 0;
   packetConnectionWrite.syn = 1;  // /ACK:0, SEQ:1 CON:2 FIN:3
 
@@ -102,6 +110,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
     formatSendConnectionData(packet, packetLength);
 
     softwareSerial->write(packet, strlen(packet));
+
     free(packet);
     delay(100);
 

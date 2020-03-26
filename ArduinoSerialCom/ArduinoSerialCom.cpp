@@ -94,3 +94,35 @@ bool ArduinoSerialCom::hasPacketErrors(char *data, int _checkSum1, int _checkSum
   }
   return true;
 }
+
+void ArduinoSerialCom::setUniqueArduinoIDToEEPROM(char *UAID) {
+  byte length = strlen(UAID);
+  int addrOffset = 0;
+  EEPROM.write(addrOffset, length);
+  for (int index = 0; index < length; index++) {
+    EEPROM.write(addrOffset + 1 + index, UAID[index]);
+  }
+}
+
+int ArduinoSerialCom::getUniqueArduinoIDFromEEEPROM() {
+  int addrOffset = 0;
+  int length = EEPROM.read(addrOffset);
+  int UAIDLength = 4;
+  char *UAID;
+  UAID = (char *)malloc(sizeof(char) * UAIDLength);
+
+  if (length == 255 || length != UAIDLength) {
+    long randId = random(1000, 9999);
+    sprintf(UAID, "%d", randId);
+    setUniqueArduinoIDToEEPROM(UAID);
+    delay(10);
+    return getUniqueArduinoIDFromEEEPROM();
+  }
+  int index;
+  for (index = 0; index < UAIDLength; index++) {
+    UAID[index] = EEPROM.read(addrOffset + 1 + index);
+  }
+  UAID[index] = '\0';
+
+  return atoi(UAID);
+}
