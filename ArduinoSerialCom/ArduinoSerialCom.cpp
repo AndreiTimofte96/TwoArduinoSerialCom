@@ -107,16 +107,17 @@ void ArduinoSerialCom::setUniqueArduinoIDToEEPROM(char *UAID) {
 int ArduinoSerialCom::getUniqueArduinoIDFromEEEPROM() {
   int addrOffset = 0;
   int length = EEPROM.read(addrOffset);
-  int UAIDLength = 4;
+  int UAIDLength = 4;  // modify UAID length;
   char *UAID;
   UAID = (char *)malloc(sizeof(char) * UAIDLength);
 
   if (length == 255 || length != UAIDLength) {
+    randomSeed(analogRead(0));
     long randId = random(1000, 9999);
     sprintf(UAID, "%d", randId);
     setUniqueArduinoIDToEEPROM(UAID);
     delay(10);
-    return getUniqueArduinoIDFromEEEPROM();
+    return atoi(UAID);
   }
   int index;
   for (index = 0; index < UAIDLength; index++) {
