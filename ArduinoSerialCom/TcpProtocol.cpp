@@ -8,6 +8,7 @@ TcpProtocol::TcpProtocol() {
 }
 
 int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
+  softwareSerial->listen();
   int bDataLength = TcpConnection::BLOCK_SIZE;
   int packetLength = TcpConnection::BLOCK_SIZE;
 
@@ -94,6 +95,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   formatSendConnectionData(packet, packetLength);
 
   softwareSerial->write(packet, strlen(packet));
+  hardwareSerial->println(packet);
 
   delay(10);
 
@@ -404,6 +406,7 @@ void TcpProtocol::sendData(char *dataToSend) {
 
 bool TcpProtocol::write(char *dataToSend) {
   if (connection.getStatus() == Connection::CONNECTED) {
+    softwareSerial->listen();
     hardwareSerial->println("\nSENDING:");
     sendData(dataToSend);
     return true;
@@ -504,6 +507,7 @@ void TcpProtocol::receiveData(char *dataToReceive) {
 
 bool TcpProtocol::read(char *dataToReceive) {
   if (connection.getStatus() == Connection::CONNECTED) {
+    softwareSerial->listen();
     hardwareSerial->println("\nRECEIVING:");
     memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
     receiveData(dataToReceive);

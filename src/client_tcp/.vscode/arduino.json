@@ -1,5 +1,0 @@
-{
-    "board": "arduino:avr:uno",
-    "sketch": "client_tcp.ino",
-    "port": "/dev/ttyACM1"
-}
