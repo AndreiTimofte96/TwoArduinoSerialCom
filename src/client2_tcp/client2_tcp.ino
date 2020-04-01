@@ -1,15 +1,29 @@
-// 32,16,8,0,Ana are mere si
+// UAID = 4987
 #include "TcpProtocol.hpp"
 
 TcpProtocol tcpProtocol;
 
-void setup() {
-  tcpProtocol.initializePorts(8, 9);                // RX, TX
-  tcpProtocol.initializeSerial(Serial, 9600, 500);  //Serial, baudRate, Serial.setTimeout
+struct {
+  int rxPort;
+  int txPort;
+  int UAID;
+} receiver[2];
 
-  // delay(3000);
+void receiversSetup() {
+  receiver[0].rxPort = 8;
+  receiver[0].txPort = 9;
+  receiver[0].UAID = 8808;
 }
+
+void setup() {
+  receiversSetup();
+
+  tcpProtocol.initializePorts(receiver[0].rxPort, receiver[0].txPort);  // RX, TX
+  tcpProtocol.initializeSerial(Serial, 9600, 500);                      //Serial, baudRate, Serial.setTimeout
+}
+
 char dataToReceive[300];
+int destinationUAID = 0;
 String str;
 int strLength;
 
@@ -18,29 +32,32 @@ void loop() {
     tcpProtocol.printLastError();
   }
 
-  delay(10000000);
-  // while (1) {
-  //   if (!tcpProtocol.read(dataToReceive)) {
-  //     tcpProtocol.printLastError();
-  //   }
+  while (1) {
+    if (!tcpProtocol.read(dataToReceive, destinationUAID)) {
+      tcpProtocol.printLastError();
+    }
 
-  //   Serial.println("\nRECEIVED DATA FROM SERVER:");
-  //   Serial.println(dataToReceive);
-  //   Serial.println();
+    Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
+    Serial.print(destinationUAID);
+    Serial.println(":");
+    Serial.println(dataToReceive);
+    Serial.println();
 
-  //   while (!Serial.available())
-  //     ;
-  //   str = Serial.readStringUntil('\n');
-  //   strLength = str.length();
-  //   char userStr[strLength + 1];
-  //   str.toCharArray(userStr, strLength + 1);
+    while (!Serial.available())
+      ;
+    str = Serial.readStringUntil('\n');
+    strLength = str.length();
+    char userStr[strLength + 1];
+    str.toCharArray(userStr, strLength + 1);
 
-  //   Serial.println(userStr);
+    Serial.println(userStr);
 
-  //   if (!tcpProtocol.write(userStr)) {
-  //     tcpProtocol.printLastError();
-  //   }
-  // }
+    if (!tcpProtocol.write(userStr, receiver[0].UAID)) {
+      tcpProtocol.printLastError();
+    }
+  }
 
-  // tcpProtocol.arduinoClose();
+  tcpProtocol.arduinoClose();
 }
+
+//Salut, ma bucur sa te cunosc!

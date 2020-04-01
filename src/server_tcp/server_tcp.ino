@@ -1,49 +1,85 @@
+// UAID = 3607
 #include <TcpProtocol.hpp>
-// 32,16,8,0,Ana are mere si
 
 TcpProtocol tcpProtocol1, tcpProtocol2;
 
-void setup() {
-  tcpProtocol1.initializePorts(2, 3);                // RX, TX
-  tcpProtocol1.initializeSerial(Serial, 9600, 500);  //Serial, baudRate, Serial.setTimeout
+struct {
+  int rxPort;
+  int txPort;
+  int UAID;
+} clients[2];
+int clientsLength = 2;
+int serverUAID = TcpProtocol::getUniqueArduinoIDFromEEEPROM();
 
-  tcpProtocol2.initializePorts(8, 9);  // RX, TX
+char dataToReceive[300];
+int destinationUAID;
+char clientUAIDError[] = "Invalid client UAID";
+
+void clientsSetup() {
+  clients[0].rxPort = 2;
+  clients[0].txPort = 3;
+
+  clients[1].rxPort = 8;
+  clients[1].txPort = 9;
+}
+
+void setup() {
+  clientsSetup();
+
+  tcpProtocol1.initializePorts(clients[0].rxPort, clients[0].txPort);  // RX, TX
+  tcpProtocol1.initializeSerial(Serial, 9600, 500);                    //Serial, baudRate, Serial.setTimeout
+
+  tcpProtocol2.initializePorts(clients[1].rxPort, clients[1].txPort);  // RX, TX
   tcpProtocol2.initializeSerial(Serial, 9600, 500);
 }
 
-char dataToReceive[300];
-int UAIDList[2];
-int UAIDListLength = 0;
+bool checkConnectedClient(int clientUAID) {
+  for (int index = 0; index < clientsLength; index++) {
+    if (clients[index].UAID == clientUAID) return true;
+  }
+  return false;
+}
 
 void loop() {
-  UAIDList[UAIDListLength++] = tcpProtocol1.listen();
-  UAIDList[UAIDListLength++] = tcpProtocol2.listen();
-
-  Serial.println(UAIDList[0]);
-  Serial.println(UAIDList[1]);
+  clients[0].UAID = tcpProtocol1.listen();
+  clients[1].UAID = tcpProtocol2.listen();
 
   while (1) {
-    if (!tcpProtocol1.read(dataToReceive)) {
+    if (!tcpProtocol1.read(dataToReceive, destinationUAID)) {
       tcpProtocol1.printLastError();
     }
     Serial.println("\nRECEIVED DATA FROM CLIENT 1:");
     Serial.println(dataToReceive);
+    Serial.println(destinationUAID);
 
-    if (!tcpProtocol2.write(dataToReceive)) {
-      tcpProtocol2.printLastError();
-    }
+    if (checkConnectedClient(destinationUAID)) {
+      if (!tcpProtocol2.write(dataToReceive, clients[0].UAID)) {
+        tcpProtocol2.printLastError();
+      }
 
-    if (!tcpProtocol2.read(dataToReceive)) {
-      tcpProtocol2.printLastError();
-    }
-    Serial.println("\nRECEIVED DATA FROM CLIENT 2:");
-    Serial.println(dataToReceive);
+      if (!tcpProtocol2.read(dataToReceive, destinationUAID)) {
+        tcpProtocol2.printLastError();
+      }
+      Serial.println("\nRECEIVED DATA FROM CLIENT 2:");
+      Serial.println(dataToReceive);
 
-    if (!tcpProtocol1.write(dataToReceive)) {
-      tcpProtocol1.printLastError();
+      if (checkConnectedClient(destinationUAID)) {
+        if (!tcpProtocol1.write(dataToReceive, clients[1].UAID)) {
+          tcpProtocol1.printLastError();
+        }
+      } else {
+        // invalid clientUAID
+        if (!tcpProtocol2.write(clientUAIDError, serverUAID)) {
+          tcpProtocol1.printLastError();
+        }
+      }
+    } else {
+      // invalid clientUAID
+      if (!tcpProtocol1.write(clientUAIDError, serverUAID)) {
+        tcpProtocol1.printLastError();
+      }
     }
   }
-
   tcpProtocol1.arduinoServerClose();
   tcpProtocol2.arduinoServerClose();
 }
