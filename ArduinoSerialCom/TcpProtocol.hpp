@@ -31,6 +31,6 @@ class TcpProtocol : public ArduinoSerialCom {
   TcpProtocol();
   bool write(char *dataToSend);
   bool read(char *dataToReceive);
-  void listen();
+  int listen();
   bool connect();
 };

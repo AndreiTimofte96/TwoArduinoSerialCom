@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <EEPROM.h>
 #include <SoftwareSerial.h>
 #include "BoardType.hpp"
 #include "Connection.hpp"
@@ -24,6 +25,9 @@ class ArduinoSerialCom {
   bool arduinoServerClose();
 
   void getBoardType();
+
+  void setUniqueArduinoIDToEEPROM(char *UAID);  // unique arduino identifier
+  int getUniqueArduinoIDFromEEEPROM();
 
  protected:
   Connection connection;
