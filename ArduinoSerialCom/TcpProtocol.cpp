@@ -5,6 +5,7 @@ int ok = true;
 TcpProtocol::TcpProtocol() {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
+  // connection.setStatus(Connection::CONNECTED);  // for debugging purposes
 }
 
 int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
@@ -167,6 +168,7 @@ void TcpProtocol::formatSendData(char *packet, int length, int checkSum1, int ch
   addNumberToCharArray(packetWrite.bOffset, packet);
   addNumberToCharArray(checkSum1, packet);
   addNumberToCharArray(checkSum2, packet);
+  addNumberToCharArray(packetWrite.UAID, packet);
   addOffsetToCharArray(packet, length);
   strcat(packet, packetWrite.bData);
 }
@@ -325,10 +327,11 @@ void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
 
 ////////////////////// HAMMMING DISTANCE CODE ENCODING METHOD ////////////
 
-void TcpProtocol::sendData(char *dataToSend) {
+void TcpProtocol::sendData(char *dataToSend, int UAID) {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE - 1;
   packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
+  packetWrite.UAID = UAID;
 
   int remainder = strlen(dataToSend) % packetWrite.bLength;
   if (remainder) {
@@ -404,11 +407,11 @@ void TcpProtocol::sendData(char *dataToSend) {
   }
 }
 
-bool TcpProtocol::write(char *dataToSend) {
+bool TcpProtocol::write(char *dataToSend, int UAID) {
   if (connection.getStatus() == Connection::CONNECTED) {
     softwareSerial->listen();
     hardwareSerial->println("\nSENDING:");
-    sendData(dataToSend);
+    sendData(dataToSend, UAID);
     return true;
   }
   error.setError(Error::WRITE_ERROR);
@@ -438,6 +441,9 @@ bool TcpProtocol::formatReceiveData(char *bData) {
   packetRead.checkSum2 = atoi(pch);
 
   pch = strtok(NULL, specialChr);
+  packetRead.UAID = atoi(pch);
+
+  pch = strtok(NULL, specialChr);
   packetRead.bData = pch;
 
   decodeWitHammingDistanceCode(packetRead.bData);
@@ -463,7 +469,7 @@ bool TcpProtocol::formatReceiveData(char *bData) {
   return true;
 }
 
-void TcpProtocol::receiveData(char *dataToReceive) {
+void TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
   int bDataLength = TcpPacket::BLOCK_SIZE;
   char *bData;
   bData = (char *)malloc(sizeof(char) * bDataLength + 1);
@@ -476,7 +482,7 @@ void TcpProtocol::receiveData(char *dataToReceive) {
     waitRead();
     memset(bData, '\0', sizeof(char) * bDataLength);
     softwareSerial_readBytes(bData, bDataLength);
-    // hardwareSerial->println("READ:");
+    hardwareSerial->println("READ:");
     hardwareSerial->println(bData);
 
     bool isPacketOk = formatReceiveData(bData);
@@ -503,14 +509,16 @@ void TcpProtocol::receiveData(char *dataToReceive) {
     free(orderedPackets[index]);
   }
   free(orderedPackets);
+
+  UAID = packetRead.UAID;
 }
 
-bool TcpProtocol::read(char *dataToReceive) {
+bool TcpProtocol::read(char *dataToReceive, int &UAID) {
   if (connection.getStatus() == Connection::CONNECTED) {
     softwareSerial->listen();
     hardwareSerial->println("\nRECEIVING:");
     memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
-    receiveData(dataToReceive);
+    receiveData(dataToReceive, UAID);
     return true;
   }
   error.setError(Error::READ_ERROR);
