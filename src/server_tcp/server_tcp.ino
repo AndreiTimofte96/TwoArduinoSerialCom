@@ -70,7 +70,7 @@ void loop() {
       } else {
         // invalid clientUAID
         if (!tcpProtocol2.write(clientUAIDError, serverUAID)) {
-          tcpProtocol1.printLastError();
+          tcpProtocol2.printLastError();
         }
       }
     } else {
