@@ -1,7 +1,8 @@
 // UAID = 8808
-#include "TcpProtocol.hpp"
+#include "UdpProtocol.hpp"
 
-TcpProtocol tcpProtocol;
+UdpProtocol udpProtocol;
+
 struct {
   int rxPort;
   int txPort;
@@ -16,20 +17,19 @@ void receiversSetup() {
 
 void setup() {
   receiversSetup();
-
-  tcpProtocol.initializePorts(receiver[0].rxPort, receiver[0].txPort);  // RX, TX
-  tcpProtocol.initializeSerial(Serial, 9600, 500);                      //Serial, baudRate, Serial.setTimeout
+  udpProtocol.initializePorts(receiver[0].rxPort, receiver[0].txPort);  // RX, TX
+  udpProtocol.initializeSerial(Serial, 9600, 500);                      //Serial, baudRate, Serial.setTimeout
 }
 
 char dataToReceive[300];
-int destinationUAID = 0;
+int fromUAID = 0;
 String str;
 int strLength;
 
 void loop() {
-  if (!tcpProtocol.connect()) {
-    tcpProtocol.printLastError();
-  }
+  // if (!udpProtocol.connect()) {
+  //   udpProtocol.printLastError();
+  // }
 
   while (1) {
     while (!Serial.available())
@@ -41,22 +41,20 @@ void loop() {
 
     Serial.println(userInput);
 
-    if (!tcpProtocol.write(userInput, receiver[0].UAID)) {
-      tcpProtocol.printLastError();
+    if (!udpProtocol.write(userInput, receiver[0].UAID)) {
+      udpProtocol.printLastError();
     }
 
-    if (!tcpProtocol.read(dataToReceive, destinationUAID)) {
-      tcpProtocol.printLastError();
+    if (!udpProtocol.read(dataToReceive, fromUAID)) {
+      udpProtocol.printLastError();
     }
 
     Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
-    Serial.print(destinationUAID);
+    Serial.print(fromUAID);
     Serial.println(":");
     Serial.println(dataToReceive);
     Serial.println();
   }
 
-  tcpProtocol.arduinoClose();
+  udpProtocol.arduinoClose();
 }
-
-// Salut, eu sunt Andrei si sunt student la Facultatea de Informatica Iasi!
