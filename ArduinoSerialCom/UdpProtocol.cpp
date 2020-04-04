@@ -18,16 +18,19 @@ void UdpProtocol::formatSendData(char *packet, int length) {
   addNumberToCharArray(packetWrite.bOffset, packet);
   addNumberToCharArray(checkSum1, packet);
   addNumberToCharArray(checkSum2, packet);
-  addNumberToCharArray(packetWrite.UAID, packet);
+  addNumberToCharArray(packetWrite.fromUAID, packet);
+  addNumberToCharArray(packetWrite.toUAID, packet);
+
   addOffsetToCharArray(packet, length);
   strcat(packet, packetWrite.bData);
 }
 
-void UdpProtocol::sendData(char *dataToSend, int UAID) {
+void UdpProtocol::sendData(char *dataToSend, int fromUAID, int toUAID) {
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
   packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
-  packetWrite.UAID = UAID;
+  packetWrite.fromUAID = fromUAID == -1 ? getUniqueArduinoIDFromEEEPROM() : fromUAID;
+  packetWrite.toUAID = toUAID;
 
   int remainder = strlen(dataToSend) % packetWrite.bLength;
   if (remainder) {
@@ -64,11 +67,22 @@ void UdpProtocol::sendData(char *dataToSend, int UAID) {
   }
 }
 
-bool UdpProtocol::write(char *dataToSend, int UAID) {
+bool UdpProtocol::write(char *dataToSend, int toUAID) {
   if (connection.getStatus() == Connection::CONNECTED) {
     softwareSerial->listen();
     hardwareSerial->println("\nSENDING:");
-    sendData(dataToSend, UAID);
+    sendData(dataToSend, -1, toUAID);
+    return true;
+  }
+  error.setError(Error::WRITE_ERROR);
+  return false;
+}
+
+bool UdpProtocol::write(char *dataToSend, int fromUAID, int toUAID) {
+  if (connection.getStatus() == Connection::CONNECTED) {
+    softwareSerial->listen();
+    hardwareSerial->println("\nSENDING:");
+    sendData(dataToSend, fromUAID, toUAID);
     return true;
   }
   error.setError(Error::WRITE_ERROR);
@@ -96,7 +110,10 @@ void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   packetRead.checkSum2 = atoi(pch);
 
   pch = strtok(NULL, specialChr);
-  packetRead.UAID = atoi(pch);
+  packetRead.fromUAID = atoi(pch);
+
+  pch = strtok(NULL, specialChr);
+  packetRead.toUAID = atoi(pch);
 
   pch = strtok(NULL, specialChr);
   packetRead.bData = pch;
@@ -106,13 +123,13 @@ void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   if (!hasPacketErrors(packetRead.bData, packetRead.checkSum1, packetRead.checkSum2)) {
     strcat(dataToReceive, packetRead.bData);
   } else {
-    char err[100];
+    char err[100];  // TO BE TRANSFORMED IN DYNAMIC MEM ALLOCATION
     snprintf(err, 100, "ERR_PACKET_%d_%d_[%s]", packetRead.checkSum1, packetRead.checkSum2, packetRead.bData);
     strcat(dataToReceive, err);
   }
 }
 
-void UdpProtocol::receiveData(char *dataToReceive, int &UAID) {
+void UdpProtocol::receiveData(char *dataToReceive, int &fromUAID, int &toUAID) {
   int bDataLength = UdpPacket::BLOCK_SIZE;
   char *bData;
   bData = (char *)malloc(sizeof(char) * bDataLength + 1);
@@ -126,16 +143,31 @@ void UdpProtocol::receiveData(char *dataToReceive, int &UAID) {
     formatReceiveData(bData, dataToReceive);
   } while (packetRead.bOffset + 1 < packetRead.bNumber);
 
-  UAID = packetRead.UAID;
+  fromUAID = packetRead.fromUAID;
+  toUAID = packetRead.toUAID;
   free(bData);
 }
 
-bool UdpProtocol::read(char *dataToReceive, int &UAID) {
+bool UdpProtocol::read(char *dataToReceive, int &fromUAID) {
   if (connection.getStatus() == Connection::CONNECTED) {
     softwareSerial->listen();
     hardwareSerial->println("\nRECEIVING:");
     memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
-    receiveData(dataToReceive, UAID);
+    int toUAID;
+    receiveData(dataToReceive, fromUAID, toUAID);
+    return true;
+  }
+  error.setError(Error::READ_ERROR);
+
+  return false;
+}
+
+bool UdpProtocol::read(char *dataToReceive, int &fromUAID, int &toUAID) {
+  if (connection.getStatus() == Connection::CONNECTED) {
+    softwareSerial->listen();
+    hardwareSerial->println("\nRECEIVING:");
+    memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
+    receiveData(dataToReceive, fromUAID, toUAID);
     return true;
   }
   error.setError(Error::READ_ERROR);

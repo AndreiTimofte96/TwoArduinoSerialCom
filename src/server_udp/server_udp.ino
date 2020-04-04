@@ -12,7 +12,8 @@ int clientsLength = 2;
 int serverUAID = UdpProtocol::getUniqueArduinoIDFromEEEPROM();
 
 char dataToReceive[300];
-int destinationUAID;
+int fromUAID;
+int toUAID;
 char clientUAIDError[] = "Invalid client UAID";
 
 void clientsSetup() {
@@ -33,57 +34,30 @@ void setup() {
   udpProtocol2.initializeSerial(Serial, 9600, 500);
 }
 
-bool checkConnectedClient(int clientUAID) {
-  for (int index = 0; index < clientsLength; index++) {
-    if (clients[index].UAID == clientUAID) return true;
-  }
-  return false;
-}
-
 void loop() {
-  // clients[0].UAID = udpProtocol1.listen();
-  // clients[1].UAID = udpProtocol2.listen();
-
   while (1) {
-    if (!udpProtocol1.read(dataToReceive, destinationUAID)) {
+    if (!udpProtocol1.read(dataToReceive, fromUAID, toUAID)) {
       udpProtocol1.printLastError();
     }
     Serial.println("\nRECEIVED DATA FROM CLIENT 1:");
     Serial.println(dataToReceive);
-    Serial.println(destinationUAID);
+    Serial.println(fromUAID);
 
-    if (!udpProtocol1.write(dataToReceive, serverUAID)) {  // TO BE REMOVED
-      udpProtocol1.printLastError();
+    if (!udpProtocol2.write(dataToReceive, fromUAID, toUAID)) {
+      udpProtocol2.printLastError();
     }
 
-    // if (checkConnectedClient(destinationUAID)) {
-    //   if (!udpProtocol2.write(dataToReceive, clients[0].UAID)) {
-    //     udpProtocol2.printLastError();
-    //   }
+    if (!udpProtocol2.read(dataToReceive, fromUAID, toUAID)) {
+      udpProtocol2.printLastError();
+    }
+    Serial.println("\nRECEIVED DATA FROM CLIENT 2:");
+    Serial.println(fromUAID);
 
-    //   if (!udpProtocol2.read(dataToReceive, destinationUAID)) {
-    //     udpProtocol2.printLastError();
-    //   }
-    //   Serial.println("\nRECEIVED DATA FROM CLIENT 2:");
-    //   Serial.println(dataToReceive);
-
-    //   if (checkConnectedClient(destinationUAID)) {
-    //     if (!udpProtocol1.write(dataToReceive, clients[1].UAID)) {
-    //       udpProtocol1.printLastError();
-    //     }
-    //   } else {
-    //     // invalid clientUAID
-    //     if (!udpProtocol2.write(clientUAIDError, serverUAID)) {
-    //       udpProtocol2.printLastError();
-    //     }
-    //   }
-    // } else {
-    //   // invalid clientUAID
-    //   if (!udpProtocol1.write(clientUAIDError, serverUAID)) {
-    //     udpProtocol1.printLastError();
-    //   }
-    // }
+    if (!udpProtocol1.write(dataToReceive, fromUAID, toUAID)) {
+      udpProtocol1.printLastError();
+    }
   }
+
   udpProtocol1.arduinoServerClose();
   udpProtocol2.arduinoServerClose();
 }

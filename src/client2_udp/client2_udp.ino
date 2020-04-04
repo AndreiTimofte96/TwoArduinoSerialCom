@@ -1,4 +1,4 @@
-// UAID = 8808
+// UAID = 4987
 #include "UdpProtocol.hpp"
 
 UdpProtocol udpProtocol;
@@ -10,9 +10,9 @@ struct {
 } receiver[2];
 
 void receiversSetup() {
-  receiver[0].rxPort = 2;
-  receiver[0].txPort = 3;
-  receiver[0].UAID = 4987;
+  receiver[0].rxPort = 8;
+  receiver[0].txPort = 9;
+  receiver[0].UAID = 8808;
 }
 
 void setup() {
@@ -32,6 +32,16 @@ void loop() {
   // }
 
   while (1) {
+    if (!udpProtocol.read(dataToReceive, fromUAID)) {
+      udpProtocol.printLastError();
+    }
+
+    Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
+    Serial.print(fromUAID);
+    Serial.println(":");
+    Serial.println(dataToReceive);
+    Serial.println();
+
     while (!Serial.available())
       ;
     str = Serial.readStringUntil('\n');
@@ -44,16 +54,6 @@ void loop() {
     if (!udpProtocol.write(userInput, receiver[0].UAID)) {
       udpProtocol.printLastError();
     }
-
-    if (!udpProtocol.read(dataToReceive, fromUAID)) {
-      udpProtocol.printLastError();
-    }
-
-    Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
-    Serial.print(fromUAID);
-    Serial.println(":");
-    Serial.println(dataToReceive);
-    Serial.println();
   }
 
   udpProtocol.arduinoClose();

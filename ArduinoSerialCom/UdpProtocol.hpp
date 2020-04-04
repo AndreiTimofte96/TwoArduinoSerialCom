@@ -6,13 +6,15 @@ class UdpProtocol : public ArduinoSerialCom {
   UdpPacket packetWrite;
 
   void formatSendData(char *packet, int length);
-  void sendData(char *dataToSend, int UAID);
+  void sendData(char *dataToSend, int fromUAID, int toUAID);
 
   void formatReceiveData(char *bData, char *dataToReceive);
-  void receiveData(char *dataToReceive, int &UAID);
+  void receiveData(char *dataToReceive, int &fromUAID, int &toUAID);
 
  public:
   UdpProtocol();
-  bool write(char *dataToSend, int UAID);
-  bool read(char *dataToReceive, int &UAID);
+  bool write(char *dataToSend, int toUAID);
+  bool write(char *dataToSend, int fromUAID, int toUAID);
+  bool read(char *dataToReceive, int &fromUAID);
+  bool read(char *dataToReceive, int &fromUAID, int &toUAID);
 };

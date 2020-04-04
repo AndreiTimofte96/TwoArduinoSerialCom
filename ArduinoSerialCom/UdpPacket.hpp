@@ -9,12 +9,13 @@ class UdpPacket {
   int bOffset;
   int checkSum1;
   int checkSum2;
-  int UAID;
+  int fromUAID;
+  int toUAID;
   char *bData;
 
   enum blockInformation {
-    BLOCK_SIZE = 45,
-    BLOCK_HEADER_SIZE = 29,
+    BLOCK_SIZE = 49,
+    BLOCK_HEADER_SIZE = 33,
     BLOCK_BODY_SIZE = 16
   };
 };
