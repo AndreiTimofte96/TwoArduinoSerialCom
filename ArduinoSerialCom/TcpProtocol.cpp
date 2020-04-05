@@ -5,7 +5,13 @@ int ok = true;
 TcpProtocol::TcpProtocol() {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
+  use_TLS_protocol = false;
   // connection.setStatus(Connection::CONNECTED);  // for debugging purposes
+}
+
+void TcpProtocol::useTLSProtocol() {
+  hardwareSerial->println("USING TLS PROTOCOL");
+  use_TLS_protocol = true;
 }
 
 int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
@@ -48,11 +54,23 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
       formatReceiveConnectionData(bData);
 
       if (packetConnectionRead.seq == packetConnectionWrite.ack &&
-          packetConnectionRead.ack == packetConnectionWrite.seq + 1 && packetConnectionRead.syn == 0) {
+          packetConnectionRead.ack == packetConnectionWrite.seq + 1) {
         connectionEstablished = true;
         connection.setStatus(Connection::CONNECTED);
         hardwareSerial->print("CONNECTION SERVER SIDE ESTABLISHED: ");
         hardwareSerial->println(clientUAID);
+
+        /////// TLS CONNECTION ////////
+        if (packetConnectionRead.syn == 4) {  // IF WE HAVE ALSO A TLS PROTOCOL
+          use_TLS_protocol = true;
+          if (TLSListen() == false) {
+            connectionEstablished = use_TLS_protocol = false;
+            connection.setStatus(Connection::DISCONNECTED);
+            error.setError(Error::TCP_CONNECTION_ERROR);
+          }
+        }
+        /////// TLS CONNECTION ////////
+
       } else {
         connection.setStatus(Connection::DISCONNECTED);
         error.setError(Error::TCP_CONNECTION_ERROR);
@@ -115,7 +133,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
       packetConnectionRead.ack == packetConnectionWrite.seq + 1) {
     packetConnectionWrite.seq = packetConnectionRead.ack;
     packetConnectionWrite.ack = packetConnectionRead.seq + 1;
-    packetConnectionWrite.syn = 0;  // /ACK:0, SEQ:1 CON:2 FIN:3
+    packetConnectionWrite.syn = use_TLS_protocol ? 4 : 0;  // /ACK:0, SEQ:1 CON:2 FIN:3 TLS: 4
 
     memset(packet, '\0', sizeof(char) * packetLength + 1);
     formatSendConnectionData(packet, packetLength);
@@ -128,6 +146,17 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
 
     hardwareSerial->println("CONNECTION CLIENT SIDE ESTABLISHED");
     connection.setStatus(Connection::CONNECTED);
+
+    ////// TLS CONNECTION //////
+    if (use_TLS_protocol) {
+      if (TLSConnect() == false) {
+        connection.setStatus(Connection::DISCONNECTED);
+        error.setError(Error::TCP_CONNECTION_ERROR);
+        return false;
+      }
+    }
+    ////// TLS CONNECTION //////
+
     return true;
   }
 
@@ -137,6 +166,74 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   error.setError(Error::TCP_CONNECTION_ERROR);
   return false;
 }
+
+/////////////////// TLS START ////////////////////////////
+
+bool TcpProtocol::TLSListen() {
+  char *randomFctString, *publicKey, *preMasterKeyEncrypted;
+  int UAID = 0;
+  randomFctString = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(randomFctString, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  publicKey = (char *)malloc(sizeof(char) * 5);
+  memset(publicKey, '\0', sizeof(char) * 5);
+
+  preMasterKeyEncrypted = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(preMasterKeyEncrypted, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  read(randomFctString, UAID);
+  Serial.println("randomFctString");
+  Serial.println(randomFctString);
+
+  itoa(rsaProtocol.publicKey, publicKey, 10);
+  write(publicKey, UAID);
+  Serial.println("publicKey");
+  Serial.println(publicKey);
+
+  read(preMasterKeyEncrypted, UAID);
+  Serial.println("preMasterKeyEncrypted");
+  Serial.println(preMasterKeyEncrypted);
+  return true;
+}
+
+void TcpProtocol::generateRandomString(char *str) {
+  randomSeed(analogRead(0));
+  for (int index = 0; index < TcpPacket::BLOCK_BODY_SIZE - 1; index++) {
+    str[index] = random(32, 125);
+  }
+}
+
+bool TcpProtocol::TLSConnect() {
+  char *randomFctString, *publicKey, *preMasterKeyEncrypted;
+  char preMasterKey[] = "Ana are mere si!";
+  int UAID = 0;
+  randomFctString = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(randomFctString, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  publicKey = (char *)malloc(sizeof(char) * 5);
+  memset(publicKey, '\0', sizeof(char) * 5);
+
+  preMasterKeyEncrypted = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(preMasterKeyEncrypted, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  generateRandomString(randomFctString);
+  write(randomFctString, UAID);
+  Serial.println("randomFctString");
+  Serial.println(randomFctString);
+
+  read(publicKey, UAID);
+  Serial.println("publicKey");
+  Serial.println(publicKey);
+
+  rsaProtocol.encrypt_decrypt(preMasterKey, preMasterKeyEncrypted, atoi(publicKey));
+  write(preMasterKeyEncrypted, UAID);
+  Serial.println("preMasterKeyEncrypted");
+  Serial.println(preMasterKeyEncrypted);
+
+  free(randomFctString);
+  return true;
+}
+
+/////////////////// TLS END ////////////////////////////
 
 void TcpProtocol::formatReceiveConnectionData(char *bData) {
   char *pch;

@@ -1,0 +1,51 @@
+Great video John, watched many this one explains it the best so far. So in a nutshell just to confirm:
+1.) Client (browser) send an SSL hello to the server. This includes the type of ciphers it supports etc.
+2.) Server receives hello and generates a key-pair (A public key and a private key). Server sends the digital certificate
+ to the client with ONLY the public key encrypted in it. Any 'sniffers' listening on the wire will only be able to decrypt
+  the public key if they have the private key (which they do not.)
+3.) Client receives the certificate and the public key. It checks the contents of the certificate against its CA database
+ to confirm it is legit. 
+4.) Client then generates a Pre-master Secret and encrypts it with the public key originally sent from the Server. 
+(Again 'sniffers' cannot decrypt the public key as only the server knows what the private key is.)
+5.) Server then decrypts the public key with the private key it generated in the beginning, and then runs pseudo random 
+function against the pre-master key. The result is the master key.
+6.) Both the client and server now have the same master key which they can now use in symmetric encryption to send encrypted
+ traffic to each other.
+
+
+
+
+
+very nice!  you've done a great job at recapping the entire process.  i would only add a couple of minor points:  
+in your step 2 above, the server already has the public and private keys (in fact, the server gets them from the 
+certificate authority (CA) when it gets the certificate).  so, the server doesn't need to generate those keys during 
+this handshake process.  but, as you mentioned, the server sends the certificate to the client and the certificate 
+includes the public key.  in your step 5 above, the server doesn't decrypt the public key, but rather it decrypts 
+the pre-master secret that the client sent encrypted using the public key.  also, the client and server each use that 
+pre-master secret to generate the symmetric (master) key on their own.  So, they actually never send the master key to 
+one another.  they do, however, encrypt some of the final parts of the handshake using the master key, and when they can 
+successfully decrypt those messages, then they both know that they have each generated the same master key 
+(using the pre-master secret to generate the master secret).  
+
+again, great job on the recap of this...i think you have a great understanding of the process...well done!!
+
+
+
+
+
+
+one small query, the process of generating master key from pre-master key sent by client, how is it ensured that both 
+client and server will use the same function to generate the same master  key. Is the fucntion agreed upfront?
+
+
+
+
+
+This is a great question!  The answer is, yes, the client and server have mutually agreed upon a function to generate 
+the master key prior to the generation of the master key.  It's a function that is comprised of a random string of data
+that the client sends to the server (in clear text during the Client Hello), and random string of data that the server
+ sends to the client (in clear text during the Server Hello), and the pre-master secret.  As you know, the pre-master 
+ secret is encrypted, so only the client and server know that value.  When the function is run, the master secret is
+  generated, and the client and server should both come up with the same value.  The remaining portion of the handshake 
+  is encrypted with the master secret, so when both sides are able to decrypt those messages, they both know the master
+   secret was generated correctly.  Hope this helps!!
