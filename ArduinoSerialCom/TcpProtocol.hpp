@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include "ArduinoSerialCom.hpp"
-#include "RSAProtocol.hpp"
+#include "TLSProtocol.hpp"
 #include "TcpConnection.hpp"
 #include "TcpPacket.hpp"
 
@@ -10,7 +10,7 @@ class TcpProtocol : public ArduinoSerialCom {
   TcpPacket packetWrite;
   TcpConnection packetConnectionRead;
   TcpConnection packetConnectionWrite;
-  RSAProtocol rsaProtocol;
+  TLSProtocol tlsProtocol;
   bool use_TLS_protocol;
   char **orderedPackets;
   char *dataSendEncodedString;
@@ -34,6 +34,9 @@ class TcpProtocol : public ArduinoSerialCom {
   bool TLSConnect();
   bool TLSListen();
   void generateRandomString(char *str);
+  void generateMasterKey(char *preMasterKey, char *randomFctString, char *masterKey);
+  void encryptAES_CBC(char *data, char *result);
+  void decryptAES_CBC(char *data, char *result, int resultLength);
 
  public:
   TcpProtocol();

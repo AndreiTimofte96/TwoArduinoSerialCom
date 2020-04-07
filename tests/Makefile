@@ -1,7 +1,4 @@
-pr1:
-		g++ rsa.cpp -o rsa
-		./rsa
+all:	
+		g++ cbcAes.cpp -o cbcAes
+		./cbcAes
 
-rsa2:
-		g++ rsa1.cpp -o rsa1
-		./rsa1

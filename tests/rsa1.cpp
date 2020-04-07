@@ -5,7 +5,7 @@
 
 int x, y, n, t, i, flag;
 long int e[100], d[100], temp[100], j, m[100], en[100];
-char msg[100] = "46,17,1,0,10,194,0,,,,,,,,,,,Fs+(���~`D�֖�Cg";
+char msg[100] = "anaaremeresiper";
 int prime(long int);
 void encryption_key();
 long int cd(long int);
@@ -13,8 +13,8 @@ void encrypt();
 void decrypt();
 
 int main() {
-  x = 541;
-  y = 547;
+  x = 673;
+  y = 677;
   for (i = 0; msg[i] != NULL; i++)
     m[i] = msg[i];
   n = x * y;
@@ -71,14 +71,14 @@ void encrypt() {
   len = strlen(msg);
   while (i != len) {
     pt = m[i];
-    pt = pt - 96;
+    pt = pt - 0;
     k = 1;
     for (j = 0; j < key; j++) {
       k = k * pt;
       k = k % n;
     }
     temp[i] = k;
-    ct = k + 96;
+    ct = k + 0;
     en[i] = ct;
     i++;
   }
@@ -101,7 +101,7 @@ void decrypt() {
       k = k % n;
     }
     printf("%d ", k);
-    pt = k + 96;
+    pt = k + 0;
     m[i] = pt;
     i++;
   }

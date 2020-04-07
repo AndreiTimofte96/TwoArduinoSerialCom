@@ -5,13 +5,12 @@ int ok = true;
 TcpProtocol::TcpProtocol() {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
-  use_TLS_protocol = false;
   // connection.setStatus(Connection::CONNECTED);  // for debugging purposes
 }
 
 void TcpProtocol::useTLSProtocol() {
   hardwareSerial->println("USING TLS PROTOCOL");
-  use_TLS_protocol = true;
+  tlsProtocol.setUseTLSProtocol(true);
 }
 
 int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
@@ -62,9 +61,12 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
         /////// TLS CONNECTION ////////
         if (packetConnectionRead.syn == 4) {  // IF WE HAVE ALSO A TLS PROTOCOL
-          use_TLS_protocol = true;
+          tlsProtocol.setUseTLSProtocol(true);
+
           if (TLSListen() == false) {
-            connectionEstablished = use_TLS_protocol = false;
+            connectionEstablished = false;
+            tlsProtocol.setUseTLSProtocol(false);
+
             connection.setStatus(Connection::DISCONNECTED);
             error.setError(Error::TCP_CONNECTION_ERROR);
           }
@@ -133,7 +135,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
       packetConnectionRead.ack == packetConnectionWrite.seq + 1) {
     packetConnectionWrite.seq = packetConnectionRead.ack;
     packetConnectionWrite.ack = packetConnectionRead.seq + 1;
-    packetConnectionWrite.syn = use_TLS_protocol ? 4 : 0;  // /ACK:0, SEQ:1 CON:2 FIN:3 TLS: 4
+    packetConnectionWrite.syn = tlsProtocol.getUseTLSProtocol() ? 4 : 0;  // /ACK:0, SEQ:1 CON:2 FIN:3 TLS: 4
 
     memset(packet, '\0', sizeof(char) * packetLength + 1);
     formatSendConnectionData(packet, packetLength);
@@ -148,7 +150,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
     connection.setStatus(Connection::CONNECTED);
 
     ////// TLS CONNECTION //////
-    if (use_TLS_protocol) {
+    if (tlsProtocol.getUseTLSProtocol()) {
       if (TLSConnect() == false) {
         connection.setStatus(Connection::DISCONNECTED);
         error.setError(Error::TCP_CONNECTION_ERROR);
@@ -166,74 +168,6 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   error.setError(Error::TCP_CONNECTION_ERROR);
   return false;
 }
-
-/////////////////// TLS START ////////////////////////////
-
-bool TcpProtocol::TLSListen() {
-  char *randomFctString, *publicKey, *preMasterKeyEncrypted;
-  int UAID = 0;
-  randomFctString = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-  memset(randomFctString, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-  publicKey = (char *)malloc(sizeof(char) * 5);
-  memset(publicKey, '\0', sizeof(char) * 5);
-
-  preMasterKeyEncrypted = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-  memset(preMasterKeyEncrypted, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-
-  read(randomFctString, UAID);
-  Serial.println("randomFctString");
-  Serial.println(randomFctString);
-
-  itoa(rsaProtocol.publicKey, publicKey, 10);
-  write(publicKey, UAID);
-  Serial.println("publicKey");
-  Serial.println(publicKey);
-
-  read(preMasterKeyEncrypted, UAID);
-  Serial.println("preMasterKeyEncrypted");
-  Serial.println(preMasterKeyEncrypted);
-  return true;
-}
-
-void TcpProtocol::generateRandomString(char *str) {
-  randomSeed(analogRead(0));
-  for (int index = 0; index < TcpPacket::BLOCK_BODY_SIZE - 1; index++) {
-    str[index] = random(32, 125);
-  }
-}
-
-bool TcpProtocol::TLSConnect() {
-  char *randomFctString, *publicKey, *preMasterKeyEncrypted;
-  char preMasterKey[] = "Ana are mere si!";
-  int UAID = 0;
-  randomFctString = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-  memset(randomFctString, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-
-  publicKey = (char *)malloc(sizeof(char) * 5);
-  memset(publicKey, '\0', sizeof(char) * 5);
-
-  preMasterKeyEncrypted = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-  memset(preMasterKeyEncrypted, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-
-  generateRandomString(randomFctString);
-  write(randomFctString, UAID);
-  Serial.println("randomFctString");
-  Serial.println(randomFctString);
-
-  read(publicKey, UAID);
-  Serial.println("publicKey");
-  Serial.println(publicKey);
-
-  rsaProtocol.encrypt_decrypt(preMasterKey, preMasterKeyEncrypted, atoi(publicKey));
-  write(preMasterKeyEncrypted, UAID);
-  Serial.println("preMasterKeyEncrypted");
-  Serial.println(preMasterKeyEncrypted);
-
-  free(randomFctString);
-  return true;
-}
-
-/////////////////// TLS END ////////////////////////////
 
 void TcpProtocol::formatReceiveConnectionData(char *bData) {
   char *pch;
@@ -255,8 +189,123 @@ void TcpProtocol::formatSendConnectionData(char *packet, int packetLength) {
 
   addOffsetToCharArray(packet, packetLength);
 }
-
 /////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////TLS PROTOCOL//////////////////////////
+bool TcpProtocol::TLSListen() {
+  char *randomFctString, *publicKey, *preMasterKey, *preMasterKeyEncrypted;
+  int UAID = 0;
+
+  randomFctString = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(randomFctString, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  publicKey = (char *)malloc(sizeof(char) * 5);
+  memset(publicKey, '\0', sizeof(char) * 5);
+
+  preMasterKey = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(preMasterKey, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  preMasterKeyEncrypted = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(preMasterKeyEncrypted, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  tlsProtocol.masterKey = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(tlsProtocol.masterKey, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  //STEP 1
+  read(randomFctString, UAID);
+  Serial.println(randomFctString);
+
+  //STEP 2
+  itoa(tlsProtocol.publicKey, publicKey, 10);
+  write(publicKey, UAID);
+
+  //STEP 3
+  read(preMasterKeyEncrypted, UAID);
+
+  //STEP 4
+  tlsProtocol.encryptRSA_decryptRSA(preMasterKeyEncrypted, tlsProtocol.privateKey, preMasterKey);
+  tlsProtocol.generateMasterKey(preMasterKey, randomFctString, tlsProtocol.masterKey);
+
+  //STEP 6
+  strcpy(randomFctString, "FIN");
+  memset(preMasterKey, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(preMasterKeyEncrypted, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  read(preMasterKey, UAID);
+  tlsProtocol.encryptAES_CBC(randomFctString, preMasterKeyEncrypted);
+
+  bool ok = false;
+  if (strcmp(preMasterKey, preMasterKeyEncrypted) == 0) {
+    Serial.println("ESTABLISHED MASTER AES KEY");
+    write(preMasterKeyEncrypted, UAID);
+    ok = true;
+  }
+
+  free(randomFctString);
+  free(publicKey);
+  free(preMasterKey);
+  free(preMasterKeyEncrypted);
+  return ok;
+}
+
+bool TcpProtocol::TLSConnect() {
+  char *randomFctString, *publicKey, *preMasterKey, *preMasterKeyEncrypted;
+  int UAID = 0;
+  randomFctString = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(randomFctString, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  publicKey = (char *)malloc(sizeof(char) * 5);
+  memset(publicKey, '\0', sizeof(char) * 5);
+
+  preMasterKey = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(preMasterKey, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  preMasterKeyEncrypted = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(preMasterKeyEncrypted, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  tlsProtocol.masterKey = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(tlsProtocol.masterKey, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  //STEP 1
+  tlsProtocol.generateRandomString(randomFctString);
+  write(randomFctString, UAID);
+
+  //STEP 2
+  read(publicKey, UAID);
+
+  //STEP 3
+  tlsProtocol.generateRandomString(preMasterKey);
+  tlsProtocol.encryptRSA_decryptRSA(preMasterKey, atoi(publicKey), preMasterKeyEncrypted);
+  write(preMasterKeyEncrypted, UAID);
+  tlsProtocol.generateMasterKey(preMasterKey, randomFctString, tlsProtocol.masterKey);
+
+  Serial.println("tlsProtocol.masterKey");
+  Serial.println(tlsProtocol.masterKey);
+
+  //STEP 5
+  strcpy(randomFctString, "FIN");
+  memset(preMasterKey, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+  memset(preMasterKeyEncrypted, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
+
+  tlsProtocol.encryptAES_CBC(randomFctString, preMasterKey);  // encrypt FIN
+  write(preMasterKey, UAID);
+
+  // //STEP 7
+  read(preMasterKeyEncrypted, UAID);
+
+  bool ok = false;
+  if (strcmp(preMasterKey, preMasterKeyEncrypted) == 0) {
+    Serial.println("ESTABLISHED MASTER AES KEY");
+    ok = true;
+  }
+
+  free(randomFctString);
+  free(publicKey);
+  free(preMasterKey);
+  free(preMasterKeyEncrypted);
+
+  return ok;
+}
+///////////////////////////////////TLS PROTOCOL//////////////////////////
 
 void TcpProtocol::formatSendData(char *packet, int length, int checkSum1, int checkSum2) {
   addNumberToCharArray(packetWrite.pSize, packet);

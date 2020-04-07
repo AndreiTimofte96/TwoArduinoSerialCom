@@ -7,7 +7,7 @@ using namespace std;
 
 int prime1, prime2, primeProd, totem;
 int publicKey, privateKey, temp[100];
-char text[] = "Ana are mere si!", encrypted[100], decrypted[100];
+char text[] = "anaaremeresipere", encrypted[50], decrypted[50];
 
 bool isPrime(int number) {
   int d = 2;
