@@ -1,3 +1,4 @@
+#include <AESLib.h>
 #include <Arduino.h>
 
 class TLSProtocol {

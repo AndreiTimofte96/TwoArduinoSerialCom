@@ -3,6 +3,7 @@
 #include "TcpPacket.hpp"
 
 TLSProtocol::TLSProtocol() {
+  masterKey[0] = '\0';
   useTLSProtocol = false;
   primeProd = 143;
   publicKey = 7;
@@ -30,15 +31,13 @@ void TLSProtocol::generateMasterKey(char *preMasterKey, char *randomFctString, c
 }
 
 void TLSProtocol::encryptAES_CBC(char *data, char *result) {
-  char *toEncrypt, *cypherText, *_iv;
+  char *toEncrypt, *cypherText;
+  char _iv[] = "0123456789012345";
 
   toEncrypt = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
   memset(toEncrypt, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
   cypherText = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
   memset(cypherText, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-  _iv = (char *)malloc(sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-  memset(_iv, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
-  strcpy(_iv, "0123456789012345");
 
   int numberOfBlocks = strlen(data) / 16 + 1;
 
@@ -52,13 +51,13 @@ void TLSProtocol::encryptAES_CBC(char *data, char *result) {
     for (int i = 0; i < 16; i++) {
       cypherText[i] = _iv[i] ^ toEncrypt[i];
     }
+    aes128_enc_single((const uint8_t *)masterKey, cypherText);
 
     strcat(result, cypherText);
     strcpy(_iv, cypherText);
   }
   free(toEncrypt);
   free(cypherText);
-  free(_iv);
 }
 
 void TLSProtocol::decryptAES_CBC(char *data, char *result, int resultLength) {
@@ -81,6 +80,8 @@ void TLSProtocol::decryptAES_CBC(char *data, char *result, int resultLength) {
     for (int encryptIndex = index * 16; encryptIndex < index * 16 + 16; encryptIndex++) {
       toEncrypt[k++] = data[encryptIndex];
     }  // formam blocurile de cate 16
+
+    aes128_dec_single((const uint8_t *)masterKey, toEncrypt);
 
     for (int i = 0; i < 16; i++) {
       cypherText[i] = _iv[i] ^ toEncrypt[i];

@@ -11,7 +11,7 @@ struct {
 int clientsLength = 2;
 int serverUAID = TcpProtocol::getUniqueArduinoIDFromEEEPROM();
 
-char dataToReceive[300];
+char dataToReceive[100];
 int destinationUAID;
 char clientUAIDError[] = "Invalid client UAID";
 

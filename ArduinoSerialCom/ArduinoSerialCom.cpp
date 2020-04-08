@@ -39,11 +39,6 @@ bool ArduinoSerialCom::arduinoClose() {
   connection.setStatus(Connection::IDLE);
 }
 
-void ArduinoSerialCom::getBoardType() {
-  hardwareSerial->print("Detected board: ");
-  hardwareSerial->println(BOARD);
-}
-
 void ArduinoSerialCom::waitRead() {
   while (!softwareSerial->available())
     ;

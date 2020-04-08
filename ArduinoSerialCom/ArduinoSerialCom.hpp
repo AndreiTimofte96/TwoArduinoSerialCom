@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <SoftwareSerial.h>
+#include <math.h>
 
-#include "BoardType.hpp"
 #include "Connection.hpp"
 #include "Error.hpp"
 
@@ -25,14 +25,11 @@ class ArduinoSerialCom {
   bool arduinoClose();
   bool arduinoServerClose();
 
-  void getBoardType();
-
   static int getUniqueArduinoIDFromEEEPROM();
 
  protected:
   Connection connection;
   Error error;
-  BoardType boardType;
   HardwareSerial *hardwareSerial;
   SoftwareSerial *softwareSerial;
 

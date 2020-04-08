@@ -1,4 +1,3 @@
-#include <math.h>
 
 #include "ArduinoSerialCom.hpp"
 #include "TLSProtocol.hpp"

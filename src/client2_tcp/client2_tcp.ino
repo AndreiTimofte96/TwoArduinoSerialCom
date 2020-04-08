@@ -23,7 +23,7 @@ void setup() {
   tcpProtocol.useTLSProtocol();
 }
 
-char dataToReceive[300];
+char dataToReceive[100];
 int destinationUAID = 0;
 String str;
 int strLength;
