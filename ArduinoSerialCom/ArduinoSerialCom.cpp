@@ -23,7 +23,7 @@ void ArduinoSerialCom::initializeSerial(HardwareSerial &Serial, int beginSpeed) 
 }
 
 void ArduinoSerialCom::printLastError() {
-  hardwareSerial->print("EROARE: ");
+  hardwareSerial->print(F("EROARE: "));
   hardwareSerial->println(error.getError());
 }
 

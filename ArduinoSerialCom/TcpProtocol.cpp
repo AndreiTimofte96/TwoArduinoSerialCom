@@ -9,7 +9,7 @@ TcpProtocol::TcpProtocol() {
 }
 
 void TcpProtocol::useTLSProtocol() {
-  hardwareSerial->println("USING TLS PROTOCOL");
+  hardwareSerial->println(F("USING TLS PROTOCOL"));
   tlsProtocol.setUseTLSProtocol(true);
 }
 
@@ -56,7 +56,7 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
           packetConnectionRead.ack == packetConnectionWrite.seq + 1) {
         connectionEstablished = true;
         connection.setStatus(Connection::CONNECTED);
-        hardwareSerial->print("CONNECTION SERVER SIDE ESTABLISHED: ");
+        hardwareSerial->print(F("CONNECTION SERVER SIDE ESTABLISHED: "));
         hardwareSerial->println(clientUAID);
 
         /////// TLS CONNECTION ////////
@@ -116,7 +116,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   formatSendConnectionData(packet, packetLength);
 
   softwareSerial->write(packet, strlen(packet));
-  hardwareSerial->println(packet);
+  // hardwareSerial->println(packet);
 
   delay(10);
 
@@ -146,7 +146,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
     free(packet);
     delay(10);
 
-    hardwareSerial->println("CONNECTION CLIENT SIDE ESTABLISHED");
+    hardwareSerial->println(F("CONNECTION CLIENT SIDE ESTABLISHED"));
     connection.setStatus(Connection::CONNECTED);
 
     ////// TLS CONNECTION //////
@@ -201,7 +201,6 @@ bool TcpProtocol::TLSListen() {
 
   //STEP 1
   read(randomFctString, UAID);
-  Serial.println(randomFctString);
 
   //STEP 2
   itoa(tlsProtocol.publicKey, publicKey, 10);
@@ -214,9 +213,6 @@ bool TcpProtocol::TLSListen() {
   tlsProtocol.encryptRSA_decryptRSA(preMasterKeyEncrypted, tlsProtocol.privateKey, preMasterKey);
   tlsProtocol.generateMasterKey(preMasterKey, randomFctString, tlsProtocol.masterKey);
 
-  Serial.println("tlsProtocol.masterKey");
-  Serial.println(tlsProtocol.masterKey);
-
   //STEP 6
   strcpy(randomFctString, "FIN");
   memset(preMasterKey, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
@@ -227,7 +223,8 @@ bool TcpProtocol::TLSListen() {
 
   bool ok = false;
   if (strcmp(preMasterKey, preMasterKeyEncrypted) == 0) {
-    Serial.println("ESTABLISHED MASTER AES KEY");
+    hardwareSerial->println(F("ESTABLISHED MASTER KEY"));
+    hardwareSerial->println(tlsProtocol.masterKey);
     write(preMasterKeyEncrypted, UAID);
     ok = true;
     tlsProtocol.setUseMasterKey(ok);
@@ -255,9 +252,6 @@ bool TcpProtocol::TLSConnect() {
   write(preMasterKeyEncrypted, UAID);
   tlsProtocol.generateMasterKey(preMasterKey, randomFctString, tlsProtocol.masterKey);
 
-  Serial.println("tlsProtocol.masterKey");
-  Serial.println(tlsProtocol.masterKey);
-
   //STEP 5
   strcpy(randomFctString, "FIN");
   memset(preMasterKey, '\0', sizeof(char) * TcpPacket::BLOCK_BODY_SIZE);
@@ -271,7 +265,8 @@ bool TcpProtocol::TLSConnect() {
 
   bool ok = false;
   if (strcmp(preMasterKey, preMasterKeyEncrypted) == 0) {
-    Serial.println("ESTABLISHED MASTER AES KEY");
+    hardwareSerial->println(F("ESTABLISHED MASTER KEY"));
+    hardwareSerial->println(tlsProtocol.masterKey);
     ok = true;
     tlsProtocol.setUseMasterKey(ok);
   }
@@ -430,7 +425,7 @@ void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
 
   if (wrongBit) {
     dataSendEncodedBits[wrongBit] = !dataSendEncodedBits[wrongBit];
-    hardwareSerial->println("WRONG BIT CORRECTED!");
+    hardwareSerial->println(F("WRONG BIT CORRECTED!"));
   }
 
   int dataReceiveBits[140];
@@ -483,9 +478,9 @@ void TcpProtocol::sendData(char *dataToSend, int UAID) {
     /////
 
     //encode data to send -> packetWrite.bData;
-    hardwareSerial->println(packetWrite.bData);
+    // hardwareSerial->println(packetWrite.bData);
     encodeWitHammingDistanceCode(packetWrite.bData);
-    hardwareSerial->println(packetWrite.bData);
+    // hardwareSerial->println(packetWrite.bData);
 
     // TLS NOT WORKING;
     // if (tlsProtocol.getUseMasterKey()) {
@@ -513,7 +508,7 @@ void TcpProtocol::sendData(char *dataToSend, int UAID) {
     while (SENT_ACK == false) {
       softwareSerial->write(packet, strlen(packet));
       delay(10);
-      hardwareSerial->println();
+      hardwareSerial->println(F("\nSEND BLOCK:"));
       hardwareSerial->println(packet);
 
       waitRead();
@@ -523,7 +518,7 @@ void TcpProtocol::sendData(char *dataToSend, int UAID) {
 
       softwareSerial_readBytes(bDataConnection, bDataConnectionLength);
       // hardwareSerial->println("CLIENT READ:");
-      hardwareSerial->println(bDataConnection);
+      // hardwareSerial->println(bDataConnection);
       formatReceiveConnectionData(bDataConnection);
 
       if (packetConnectionRead.ack == packetWrite.bOffset + 1 && packetConnectionRead.syn == 1) {
@@ -539,8 +534,9 @@ void TcpProtocol::sendData(char *dataToSend, int UAID) {
 bool TcpProtocol::write(char *dataToSend, int UAID) {
   if (connection.getStatus() == Connection::CONNECTED) {
     softwareSerial->listen();
-    hardwareSerial->println("\nSENDING:");
+    hardwareSerial->println(F("\n-------------SENDING START----------------"));
     sendData(dataToSend, UAID);
+
     return true;
   }
   error.setError(Error::WRITE_ERROR);
@@ -594,7 +590,7 @@ bool TcpProtocol::formatReceiveData(char *bData) {
   int checkSum1 = 0, checkSum2 = 0;
   computeChecksum(packetRead.bData, checkSum1, checkSum2);
   if (checkSum1 != packetRead.checkSum1 || checkSum2 != packetRead.checkSum2) {
-    hardwareSerial->println("ERROR! RESEND PACKET");
+    hardwareSerial->println(F("ERROR! RESEND PACKET"));
     return false;
   }
 
@@ -624,7 +620,7 @@ void TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
     waitRead();
     memset(bData, '\0', sizeof(char) * bDataLength);
     softwareSerial_readBytes(bData, bDataLength);
-    hardwareSerial->println("READ:");
+    hardwareSerial->println(F("\nRECEIVE BLOCK: "));
     hardwareSerial->println(bData);
 
     bool isPacketOk = formatReceiveData(bData);
@@ -638,7 +634,7 @@ void TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
 
     softwareSerial->write(connectionPacket, strlen(connectionPacket));
     // hardwareSerial->println("CLIENT WRITE:");
-    hardwareSerial->println(connectionPacket);
+    // hardwareSerial->println(connectionPacket);
     delay(10);
 
   } while (packetRead.bOffset + 1 < packetRead.bNumber);
@@ -658,9 +654,10 @@ void TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
 bool TcpProtocol::read(char *dataToReceive, int &UAID) {
   if (connection.getStatus() == Connection::CONNECTED) {
     softwareSerial->listen();
-    hardwareSerial->println("\nRECEIVING:");
+    hardwareSerial->println(F("\n-------------RECEIVING START--------------"));
     memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
     receiveData(dataToReceive, UAID);
+
     return true;
   }
   error.setError(Error::READ_ERROR);
