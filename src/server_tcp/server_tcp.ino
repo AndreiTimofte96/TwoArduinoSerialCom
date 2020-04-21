@@ -44,7 +44,9 @@ void loop() {
   clients[0].UAID = tcpProtocol1.listen();
   clients[1].UAID = tcpProtocol2.listen();
 
-  while (1) {
+  int ok = 2;
+  while (ok) {
+    ok--;
     if (!tcpProtocol1.read(dataToReceive, destinationUAID)) {
       tcpProtocol1.printLastError();
     }
@@ -80,8 +82,10 @@ void loop() {
       }
     }
   }
-  tcpProtocol1.arduinoServerClose();
-  tcpProtocol2.arduinoServerClose();
+  tcpProtocol1.serverClose();
+  tcpProtocol2.serverClose();
+  while (1)
+    ;
 }
 
 // char dataToSendOption1[] = "Ana are mere si gutui si tata are pere";

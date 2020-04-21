@@ -4,8 +4,12 @@ class Connection {
   enum connectionStatus {
     DISCONNECTED,
     CONNECTED,
-    IDLE,
+    FINISHED,
+    ERROR
   };
+
+  // DISCONNECTED -> CONNECTED -> FINISHED  || ERROR
+
   void setStatus(connectionStatus status);
   connectionStatus getStatus();
 

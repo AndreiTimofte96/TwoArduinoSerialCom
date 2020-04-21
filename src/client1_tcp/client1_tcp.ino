@@ -31,7 +31,9 @@ void loop() {
     tcpProtocol.printLastError();
   }
 
-  while (1) {
+  int ok = 2;
+  while (ok) {
+    ok--;
     while (!Serial.available())
       ;
     str = Serial.readStringUntil('\n');
@@ -56,7 +58,9 @@ void loop() {
     Serial.println();
   }
 
-  tcpProtocol.arduinoClose();
+  tcpProtocol.clientClose();
+  while (1)
+    ;
 }
 
 // Salut, eu sunt Andrei si sunt student la Facultatea de Informatica Iasi!

@@ -32,7 +32,9 @@ void loop() {
     tcpProtocol.printLastError();
   }
 
-  while (1) {
+  int ok = 2;
+  while (ok) {
+    ok--;
     if (!tcpProtocol.read(dataToReceive, destinationUAID)) {
       tcpProtocol.printLastError();
     }
@@ -57,7 +59,9 @@ void loop() {
     }
   }
 
-  tcpProtocol.arduinoClose();
+  tcpProtocol.clientClose();
+  while (1)
+    ;
 }
 
 //Salut, ma bucur sa te cunosc!

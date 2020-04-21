@@ -22,9 +22,6 @@ class ArduinoSerialCom {
 
   void printLastError();
 
-  bool arduinoClose();
-  bool arduinoServerClose();
-
   void getBoardType();
 
   static int getUniqueArduinoIDFromEEEPROM();

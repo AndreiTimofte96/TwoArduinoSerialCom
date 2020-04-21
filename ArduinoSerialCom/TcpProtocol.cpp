@@ -5,10 +5,22 @@ int ok = true;
 TcpProtocol::TcpProtocol() {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE;
+  connection.setStatus(Connection::DISCONNECTED);
   // connection.setStatus(Connection::CONNECTED);  // for debugging purposes
 }
 
 int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::CONNECT_PROTOCOL_PROTOCOL_HAS_FINISHED);
+    return -1;  // means that we have an error
+  }
+  if (connection.getStatus() == Connection::ERROR) {
+    return -1;
+  }
+  if (connection.getStatus() == Connection::CONNECTED) {
+    return 0;  // means that is good
+  }
+
   softwareSerial->listen();
   int bDataLength = TcpConnection::BLOCK_SIZE;
   int packetLength = TcpConnection::BLOCK_SIZE;
@@ -55,7 +67,7 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
         hardwareSerial->println(clientUAID);
       } else {
         connection.setStatus(Connection::DISCONNECTED);
-        error.setError(Error::TCP_CONNECTION_ERROR);
+        error.setError(Error::CONNECT_INTERNAL_ERROR);
       }
 
     } else {
@@ -71,7 +83,7 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
       delay(10);
 
       connection.setStatus(Connection::DISCONNECTED);
-      error.setError(Error::TCP_CONNECTION_ERROR);
+      error.setError(Error::CONNECT_INTERNAL_ERROR);
     }
   }
 
@@ -82,6 +94,17 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 }
 
 bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::CONNECT_PROTOCOL_PROTOCOL_HAS_FINISHED);
+    return false;
+  }
+  if (connection.getStatus() == Connection::ERROR) {
+    return false;
+  }
+  if (connection.getStatus() == Connection::CONNECTED) {
+    return true;  // means that is good
+  }
+
   int UAID = getUniqueArduinoIDFromEEEPROM();
 
   packetConnectionWrite.seq = UAID;
@@ -133,8 +156,8 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
 
   free(bData);
   free(packet);
-  connection.setStatus(Connection::DISCONNECTED);
-  error.setError(Error::TCP_CONNECTION_ERROR);
+  connection.setStatus(Connection::ERROR);
+  error.setError(Error::CONNECT_INTERNAL_ERROR);
   return false;
 }
 
@@ -161,6 +184,117 @@ void TcpProtocol::formatSendConnectionData(char *packet, int packetLength) {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
+void TcpProtocol::serverClose() {
+  if (connection.getStatus() != Connection::CONNECTED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return;
+  }
+
+  softwareSerial->listen();
+
+  packetConnectionWrite.seq = 0;
+  packetConnectionWrite.ack = getUniqueArduinoIDFromEEEPROM();
+  packetConnectionWrite.syn = 3;  // /ACK:0, SEQ:1 CON:2 FIN:3
+
+  int packetLength = TcpConnection::BLOCK_SIZE;
+  char *packet;
+  packet = (char *)malloc(sizeof(char) * packetLength + 1);
+
+  memset(packet, '\0', sizeof(char) * packetLength + 1);
+  formatSendConnectionData(packet, packetLength);
+  softwareSerial->write(packet, strlen(packet));
+  hardwareSerial->println(packet);
+
+  delay(10);
+  waitRead();
+  memset(packet, '\0', sizeof(char) * packetLength + 1);
+  softwareSerial_readBytes(packet, packetLength);
+  formatReceiveConnectionData(packet);
+
+  if (packetConnectionRead.syn == 0 && packetConnectionRead.ack == packetConnectionWrite.ack + 1) {
+    waitRead();
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    softwareSerial_readBytes(packet, packetLength);
+    formatReceiveConnectionData(packet);
+
+    if (packetConnectionRead.syn == 3 && packetConnectionRead.ack != 0) {
+      packetConnectionWrite.seq = 0;
+      packetConnectionWrite.ack = packetConnectionRead.ack + 1;
+      packetConnectionWrite.syn = 0;  // /ACK:0, SYN:1 CON: 2 FIN:3
+
+      memset(packet, '\0', sizeof(char) * packetLength + 1);
+      formatSendConnectionData(packet, packetLength);
+      softwareSerial->write(packet, strlen(packet));
+      hardwareSerial->println(packet);
+
+      hardwareSerial->println(F("FIN Server Connection"));
+      connection.setStatus(Connection::FINISHED);
+    } else {
+      connection.setStatus(Connection::ERROR);
+      error.setError(Error::CONNECT_INTERNAL_ERROR);
+    }
+  } else {
+    connection.setStatus(Connection::ERROR);
+    error.setError(Error::CONNECT_INTERNAL_ERROR);
+  }
+}
+
+void TcpProtocol::clientClose() {
+  if (connection.getStatus() != Connection::CONNECTED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return;
+  }
+  softwareSerial->listen();
+  int packetLength = TcpConnection::BLOCK_SIZE;
+
+  char *packet;
+  packet = (char *)malloc(sizeof(char) * packetLength + 1);
+
+  waitRead();
+  softwareSerial_readBytes(packet, packetLength);
+  formatReceiveConnectionData(packet);
+
+  if (packetConnectionRead.syn == 3 && packetConnectionRead.ack != 0) {
+    packetConnectionWrite.seq = 0;
+    packetConnectionWrite.ack = packetConnectionRead.ack + 1;
+    packetConnectionWrite.syn = 0;  // /ACK:0, SYN:1 CON: 2 FIN:3
+
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    formatSendConnectionData(packet, packetLength);
+    softwareSerial->write(packet, strlen(packet));
+    hardwareSerial->println(packet);
+    delay(10);
+
+    packetConnectionWrite.seq = 0;
+    packetConnectionWrite.ack = getUniqueArduinoIDFromEEEPROM();
+    packetConnectionWrite.syn = 3;  // /ACK:0, SYN:1 CON: 2 FIN:3
+
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    formatSendConnectionData(packet, packetLength);
+    softwareSerial->write(packet, strlen(packet));
+    hardwareSerial->println(packet);
+    delay(10);
+
+    waitRead();
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    softwareSerial_readBytes(packet, packetLength);
+    formatReceiveConnectionData(packet);
+
+    if (packetConnectionRead.syn == 0 && packetConnectionRead.ack == packetConnectionWrite.ack + 1) {
+      hardwareSerial->println(F("FIN Client Connection"));
+      connection.setStatus(Connection::FINISHED);
+
+    } else {
+      connection.setStatus(Connection::ERROR);
+      error.setError(Error::CONNECT_INTERNAL_ERROR);
+    }
+  } else {
+    connection.setStatus(Connection::ERROR);
+    error.setError(Error::CONNECT_INTERNAL_ERROR);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
 void TcpProtocol::formatSendData(char *packet, int length, int checkSum1, int checkSum2) {
   addNumberToCharArray(packetWrite.pSize, packet);
   addNumberToCharArray(packetWrite.bLength, packet);
@@ -408,14 +542,15 @@ void TcpProtocol::sendData(char *dataToSend, int UAID) {
 }
 
 bool TcpProtocol::write(char *dataToSend, int UAID) {
-  if (connection.getStatus() == Connection::CONNECTED) {
-    softwareSerial->listen();
-    hardwareSerial->println("\nSENDING:");
-    sendData(dataToSend, UAID);
-    return true;
+  if (connection.getStatus() != Connection::CONNECTED) {
+    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return false;
   }
-  error.setError(Error::WRITE_ERROR);
-  return false;
+
+  softwareSerial->listen();
+  hardwareSerial->println("\nSENDING:");
+  sendData(dataToSend, UAID);
+  return true;
 }
 
 /////////////////////////////////////////////////////////////
@@ -514,14 +649,13 @@ void TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
 }
 
 bool TcpProtocol::read(char *dataToReceive, int &UAID) {
-  if (connection.getStatus() == Connection::CONNECTED) {
-    softwareSerial->listen();
-    hardwareSerial->println("\nRECEIVING:");
-    memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
-    receiveData(dataToReceive, UAID);
-    return true;
+  if (connection.getStatus() != Connection::CONNECTED) {
+    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+    return false;
   }
-  error.setError(Error::READ_ERROR);
-
-  return false;
+  softwareSerial->listen();
+  hardwareSerial->println("\nRECEIVING:");
+  memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
+  receiveData(dataToReceive, UAID);
+  return true;
 }

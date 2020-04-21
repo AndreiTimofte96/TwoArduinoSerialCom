@@ -27,18 +27,6 @@ void ArduinoSerialCom::printLastError() {
   hardwareSerial->println(error.getError());
 }
 
-bool ArduinoSerialCom::arduinoServerClose() {
-  while (1)
-    ;
-  connection.setStatus(Connection::IDLE);
-}
-
-bool ArduinoSerialCom::arduinoClose() {
-  while (1)
-    ;
-  connection.setStatus(Connection::IDLE);
-}
-
 void ArduinoSerialCom::getBoardType() {
   hardwareSerial->print("Detected board: ");
   hardwareSerial->println(BOARD);
