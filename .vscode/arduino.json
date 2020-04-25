@@ -1,5 +1,5 @@
 {
     "board": "arduino:avr:uno",
     "port": "/dev/ttyACM0",
-    "sketch": "src\\server\\server.ino"
+    "sketch": "src/client1_udp/client1_udp.ino"
 }

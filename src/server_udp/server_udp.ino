@@ -35,7 +35,10 @@ void setup() {
 }
 
 void loop() {
-  while (1) {
+  int ok = 2;
+  while (ok) {
+    ok--;
+
     if (!udpProtocol1.read(dataToReceive, fromUAID, toUAID)) {
       udpProtocol1.printLastError();
     }
@@ -58,8 +61,10 @@ void loop() {
     }
   }
 
-  udpProtocol1.arduinoServerClose();
-  udpProtocol2.arduinoServerClose();
+  udpProtocol1.serverClose();
+  udpProtocol2.serverClose();
+  while (1)
+    ;
 }
 
 // char dataToSendOption1[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";

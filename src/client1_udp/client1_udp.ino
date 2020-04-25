@@ -31,7 +31,9 @@ void loop() {
   //   udpProtocol.printLastError();
   // }
 
-  while (1) {
+  int ok = 2;
+  while (ok) {
+    ok--;
     while (!Serial.available())
       ;
     str = Serial.readStringUntil('\n');
@@ -56,5 +58,7 @@ void loop() {
     Serial.println();
   }
 
-  udpProtocol.arduinoClose();
+  udpProtocol.clientClose();
+  while (1)
+    ;
 }

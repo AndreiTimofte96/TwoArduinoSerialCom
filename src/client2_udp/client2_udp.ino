@@ -27,11 +27,9 @@ String str;
 int strLength;
 
 void loop() {
-  // if (!udpProtocol.connect()) {
-  //   udpProtocol.printLastError();
-  // }
-
-  while (1) {
+  int ok = 2;
+  while (ok) {
+    ok--;
     if (!udpProtocol.read(dataToReceive, fromUAID)) {
       udpProtocol.printLastError();
     }
@@ -56,5 +54,7 @@ void loop() {
     }
   }
 
-  udpProtocol.arduinoClose();
+  udpProtocol.clientClose();
+  while (1)
+    ;
 }

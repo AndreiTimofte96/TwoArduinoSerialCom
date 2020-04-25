@@ -9,28 +9,31 @@ void Error::setError(errorMessages _error) {
 
 char const* Error::getError() {
   switch (error) {
-    case CONNECTION_ERROR:
-      return "EROARE_LA_CONECTARE";
-    case READ_ERROR:
-      return "EROARE_LA_CITIRE";
-    case WRITE_ERROR:
-      return "EROARE_LA_SCRIERE";
-    case TCP_CONNECTION_ERROR:
-      return "TCP_EROARE_LA_CONECTARE";
+    case CONNECT_PROTOCOL_NOT_CONNECTED_ERROR:
+      return "CONNECT_PROTOCOL_NOT_CONNECTED_ERROR";
+
+    case CONNECT_PROTOCOL_PROTOCOL_HAS_FINISHED:
+      return "CONNECT_PROTOCOL_PROTOCOL_HAS_FINISHED";
+
+    case WRITE_PROTOCOL_NOT_CONNECTED_ERROR:
+      return "WRITE_PROTOCOL_NOT_CONNECTED_ERROR";
+
+    case READ_PROTOCOL_NOT_CONNECTED_ERROR:
+      return "READ_PROTOCOL_NOT_CONNECTED_ERROR";
+
+    case CLOSE_PROTOCOL_NOT_CONNECTED_ERROR:
+      return "CLOSE_PROTOCOL_NOT_CONNECTED_ERROR";
+
+    case CONNECT_INTERNAL_ERROR:
+      return "CONNECT_INTERNAL_ERROR";
+
+    case WRITE_INTERNAL_ERROR:
+      return "WRITE_INTERNAL_ERROR";
+
+    case READ_INTERNAL_ERROR:
+      return "READ_INTERNAL_ERROR";
+
     default:
       return "UNKNOWN_ERROR";
   }
 }
-
-// char const* Error::errorMessageToString(errorMessage _error) {
-//   switch (_error) {
-//     case CONNECTION_ERROR:
-//       return "EROARE_LA_CONECTARE";
-//     case READ_ERROR:
-//       return "EROARE_LA_CITIRE";
-//     case WRITE_ERROR:
-//       return "EROARE_LA_SCRIERE";
-//     default:
-//       return "UNKNOWN_ERROR";
-//   }
-// }

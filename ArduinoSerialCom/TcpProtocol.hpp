@@ -34,4 +34,6 @@ class TcpProtocol : public ArduinoSerialCom {
   bool read(char *dataToReceive, int &UAID);  // UAID = de la cine primesti
   int listen();
   bool connect();
+  void clientClose();
+  void serverClose();
 };
