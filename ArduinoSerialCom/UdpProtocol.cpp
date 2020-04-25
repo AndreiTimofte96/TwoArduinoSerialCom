@@ -176,3 +176,13 @@ bool UdpProtocol::read(char *dataToReceive, int &fromUAID, int &toUAID) {
   receiveData(dataToReceive, fromUAID, toUAID);
   return true;
 }
+
+void UdpProtocol::clientClose() {
+  connection.setStatus(Connection::FINISHED);
+  hardwareSerial->println(F("FIN Client Connection"));
+}
+
+void UdpProtocol::serverClose() {
+  connection.setStatus(Connection::FINISHED);
+  hardwareSerial->println(F("FIN Server Connection"));
+}

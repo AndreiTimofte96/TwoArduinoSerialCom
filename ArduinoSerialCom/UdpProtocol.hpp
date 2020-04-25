@@ -17,4 +17,6 @@ class UdpProtocol : public ArduinoSerialCom {
   bool write(char *dataToSend, int fromUAID, int toUAID);
   bool read(char *dataToReceive, int &fromUAID);
   bool read(char *dataToReceive, int &fromUAID, int &toUAID);
+  void clientClose();
+  void serverClose();
 };
