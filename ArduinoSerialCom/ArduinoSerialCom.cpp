@@ -23,13 +23,8 @@ void ArduinoSerialCom::initializeSerial(HardwareSerial &Serial, int beginSpeed) 
 }
 
 void ArduinoSerialCom::printLastError() {
-  hardwareSerial->print("EROARE: ");
+  hardwareSerial->print(F("EROARE: "));
   hardwareSerial->println(error.getError());
-}
-
-void ArduinoSerialCom::getBoardType() {
-  hardwareSerial->print("Detected board: ");
-  hardwareSerial->println(BOARD);
 }
 
 void ArduinoSerialCom::waitRead() {

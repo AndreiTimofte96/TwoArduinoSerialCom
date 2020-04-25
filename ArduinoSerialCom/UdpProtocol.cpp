@@ -59,7 +59,7 @@ void UdpProtocol::sendData(char *dataToSend, int fromUAID, int toUAID) {
 
     softwareSerial->write(packet, strlen(packet));
     delay(10);
-    hardwareSerial->println();
+    hardwareSerial->println(F("WRITE:"));
     hardwareSerial->println(packet);
 
     free(packet);
@@ -74,7 +74,7 @@ bool UdpProtocol::write(char *dataToSend, int toUAID) {
   }
 
   softwareSerial->listen();
-  hardwareSerial->println("\nSENDING:");
+  hardwareSerial->println(F("\nSENDING:"));
   sendData(dataToSend, -1, toUAID);
   return true;
 }
@@ -86,7 +86,7 @@ bool UdpProtocol::write(char *dataToSend, int fromUAID, int toUAID) {
   }
 
   softwareSerial->listen();
-  hardwareSerial->println("\nSENDING:");
+  hardwareSerial->println(F("\nSENDING:"));
   sendData(dataToSend, fromUAID, toUAID);
   return true;
 }
@@ -140,7 +140,7 @@ void UdpProtocol::receiveData(char *dataToReceive, int &fromUAID, int &toUAID) {
     waitRead();
     memset(bData, '\0', sizeof(char) * bDataLength);
     softwareSerial_readBytes(bData, bDataLength);
-    hardwareSerial->println("READ:");
+    hardwareSerial->println(F("READ:"));
     hardwareSerial->println(bData);
     formatReceiveData(bData, dataToReceive);
   } while (packetRead.bOffset + 1 < packetRead.bNumber);
@@ -157,7 +157,7 @@ bool UdpProtocol::read(char *dataToReceive, int &fromUAID) {
   }
 
   softwareSerial->listen();
-  hardwareSerial->println("\nRECEIVING:");
+  hardwareSerial->println(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
   int toUAID;
   receiveData(dataToReceive, fromUAID, toUAID);
@@ -171,18 +171,20 @@ bool UdpProtocol::read(char *dataToReceive, int &fromUAID, int &toUAID) {
   }
 
   softwareSerial->listen();
-  hardwareSerial->println("\nRECEIVING:");
+  hardwareSerial->println(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
   receiveData(dataToReceive, fromUAID, toUAID);
   return true;
 }
 
-void UdpProtocol::clientClose() {
-  connection.setStatus(Connection::FINISHED);
-  hardwareSerial->println(F("FIN Client Connection"));
-}
-
 void UdpProtocol::serverClose() {
+  hardwareSerial->println(F("SERVER CLOSE:"));
   connection.setStatus(Connection::FINISHED);
   hardwareSerial->println(F("FIN Server Connection"));
+}
+
+void UdpProtocol::clientClose() {
+  hardwareSerial->println(F("CLIENT CLOSE:"));
+  connection.setStatus(Connection::FINISHED);
+  hardwareSerial->println(F("FIN Client Connection"));
 }
