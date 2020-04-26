@@ -16,10 +16,14 @@ class ArduinoSerialCom {
   void initializePorts(int rxPort, int txPort);
   // void initializeProtocol(arduinoSerialComProtocols _protocol);
 
+  void initializeSerial(HardwareSerial &Serial, int beginSpeed, int timeout, bool showLogs);
   void initializeSerial(HardwareSerial &Serial, int beginSpeed, int timeout);
+
+  void initializeSerial(HardwareSerial &Serial, int beginSpeed, bool showLogs);
   void initializeSerial(HardwareSerial &Serial, int beginSpeed);
 
   void printLastError();
+  const char *getConnectionStatus();
 
   static int getUniqueArduinoIDFromEEEPROM();
 
@@ -28,6 +32,7 @@ class ArduinoSerialCom {
   Error error;
   HardwareSerial *hardwareSerial;
   SoftwareSerial *softwareSerial;
+  bool showLogs = false;
 
   void softwareSerial_readBytes(char *data, int length);
   void waitRead();
@@ -36,6 +41,13 @@ class ArduinoSerialCom {
   void computeChecksum(char *data, int &checkSum1, int &checkSum2);
   bool hasPacketErrors(char *data, int _checkSum1, int _checkSum2);
   void whileForever();
+
+  void printLog(char *log);
+  void printLog(const __FlashStringHelper *log);
+  void printLog(int log);
+  void printlnLog(char *log);
+  void printlnLog(const __FlashStringHelper *log);
+  void printlnLog(int log);
 
   // char specialChr[2] = "\f";
   char specialChr[2] = ",";

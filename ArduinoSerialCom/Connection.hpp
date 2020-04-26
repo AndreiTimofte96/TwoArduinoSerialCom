@@ -12,6 +12,7 @@ class Connection {
 
   void setStatus(connectionStatus status);
   connectionStatus getStatus();
+  const char* getStatusStringified();
 
  private:
   connectionStatus status;

@@ -18,7 +18,7 @@ void receiversSetup() {
 void setup() {
   receiversSetup();
   udpProtocol.initializePorts(receiver[0].rxPort, receiver[0].txPort);  // RX, TX
-  udpProtocol.initializeSerial(Serial, 9600, 500);                      //Serial, baudRate, Serial.setTimeout
+  udpProtocol.initializeSerial(Serial, 9600, 500, false);               //Serial, baudRate, Serial.setTimeout
 }
 
 char dataToReceive[300];
@@ -65,6 +65,7 @@ void loop() {
   if (udpProtocol.clientClose() < 0) {
     udpProtocol.printLastError();
   }
+  Serial.println(udpProtocol.getConnectionStatus());
   while (1)
     ;
 }

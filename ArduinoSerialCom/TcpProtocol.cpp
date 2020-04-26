@@ -22,7 +22,7 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
     return Error::CONNECTED;
   }
 
-  hardwareSerial->println(F("\nLISTEN"));
+  printlnLog(F("\nLISTEN"));
   softwareSerial->listen();
   int bDataLength = TcpConnection::BLOCK_SIZE;
   int packetLength = TcpConnection::BLOCK_SIZE;
@@ -65,10 +65,10 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
           packetConnectionRead.ack == packetConnectionWrite.seq + 1 && packetConnectionRead.syn == 0) {
         connectionEstablished = true;
         connection.setStatus(Connection::CONNECTED);
-        hardwareSerial->print(F("CONNECTION SERVER SIDE ESTABLISHED: "));
-        hardwareSerial->println(clientUAID);
+        printLog(F("CONNECTION SERVER SIDE ESTABLISHED: "));
+        printlnLog(clientUAID);
       } else {
-        hardwareSerial->print(F("CONNECTION SERVER SIDE FAILED"));
+        printLog(F("CONNECTION SERVER SIDE FAILED"));
         connection.setStatus(Connection::DISCONNECTED);  // special case because while forever loop
         error.setError(Error::LISTEN_INTERNAL_ERROR);
       }
@@ -85,7 +85,7 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
       delay(10);
 
-      hardwareSerial->print(F("CONNECTION SERVER SIDE FAILED"));
+      printLog(F("CONNECTION SERVER SIDE FAILED"));
       connection.setStatus(Connection::DISCONNECTED);  // special case because while forever loop
       error.setError(Error::LISTEN_INTERNAL_ERROR);
     }
@@ -110,7 +110,7 @@ int TcpProtocol::connect() {  // THREE WAY HANDSHAKE
     return Error::CONNECTED;
   }
 
-  hardwareSerial->println(F("\nCONNECT"));
+  printlnLog(F("\nCONNECT"));
   int UAID = getUniqueArduinoIDFromEEEPROM();
 
   packetConnectionWrite.seq = UAID;
@@ -125,7 +125,7 @@ int TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   formatSendConnectionData(packet, packetLength);
 
   softwareSerial->write(packet, strlen(packet));
-  hardwareSerial->println(packet);
+  printlnLog(packet);
 
   delay(10);
 
@@ -155,14 +155,14 @@ int TcpProtocol::connect() {  // THREE WAY HANDSHAKE
     free(packet);
     delay(10);
 
-    hardwareSerial->println(F("CONNECTION CLIENT SIDE ESTABLISHED"));
+    printlnLog(F("CONNECTION CLIENT SIDE ESTABLISHED"));
     connection.setStatus(Connection::CONNECTED);
     return Error::CONNECTED;
   }
 
   free(bData);
   free(packet);
-  hardwareSerial->println(F("CONNECTION CLIENT SIDE FAILED"));
+  printlnLog(F("CONNECTION CLIENT SIDE FAILED"));
   connection.setStatus(Connection::ERROR);
   error.setError(Error::CONNECT_INTERNAL_ERROR);
   return Error::ERROR;
@@ -341,7 +341,7 @@ void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
 
   if (wrongBit) {
     dataSendEncodedBits[wrongBit] = !dataSendEncodedBits[wrongBit];
-    hardwareSerial->println(F("WRONG BIT CORRECTED!"));
+    printlnLog(F("WRONG BIT CORRECTED!"));
   }
 
   int dataReceiveBits[140];
@@ -376,7 +376,7 @@ int TcpProtocol::sendData(char *dataToSend, int UAID) {
     if (blockIndex == packetWrite.bNumber - 1 && remainder) {
       packetWrite.bLength = remainder;
       currentOffset = remainder;
-      // hardwareSerial->println(remainder);  // BUG DUBIOS
+      // printlnLog(remainder);  // BUG DUBIOS
     }
     packetWrite.bOffset = blockIndex;
     packetWrite.bData = (char *)malloc(sizeof(char) * packetWrite.bLength + 1 + 1);
@@ -394,9 +394,9 @@ int TcpProtocol::sendData(char *dataToSend, int UAID) {
     /////
 
     //encode data to send -> packetWrite.bData;
-    hardwareSerial->println(packetWrite.bData);
+    printlnLog(packetWrite.bData);
     encodeWitHammingDistanceCode(packetWrite.bData);
-    hardwareSerial->println(packetWrite.bData);
+    printlnLog(packetWrite.bData);
 
     if (blockIndex == packetWrite.bNumber - 1 && remainder) {
       packetWrite.bLength = remainder;
@@ -413,8 +413,8 @@ int TcpProtocol::sendData(char *dataToSend, int UAID) {
     while (SENT_ACK == false) {
       softwareSerial->write(packet, strlen(packet));
       delay(10);
-      hardwareSerial->println(F("WRITE:"));
-      hardwareSerial->println(packet);
+      printlnLog(F("WRITE:"));
+      printlnLog(packet);
 
       waitRead();
       int bDataConnectionLength = TcpConnection::BLOCK_SIZE;
@@ -422,8 +422,8 @@ int TcpProtocol::sendData(char *dataToSend, int UAID) {
       memset(bDataConnection, '\0', sizeof(char) * bDataConnectionLength);
 
       softwareSerial_readBytes(bDataConnection, bDataConnectionLength);
-      hardwareSerial->println(F("READ:"));
-      hardwareSerial->println(bDataConnection);
+      printlnLog(F("READ:"));
+      printlnLog(bDataConnection);
       formatReceiveConnectionData(bDataConnection);
 
       if (packetConnectionRead.ack == packetWrite.bOffset + 1 && packetConnectionRead.syn == 1) {
@@ -453,7 +453,7 @@ int TcpProtocol::write(char *dataToSend, int UAID) {
   }
 
   softwareSerial->listen();
-  hardwareSerial->println(F("\nSENDING:"));
+  printlnLog(F("\nSENDING:"));
   return sendData(dataToSend, UAID);
 }
 
@@ -491,7 +491,7 @@ bool TcpProtocol::formatReceiveData(char *bData) {
   int checkSum1 = 0, checkSum2 = 0;
   computeChecksum(packetRead.bData, checkSum1, checkSum2);
   if (checkSum1 != packetRead.checkSum1 || checkSum2 != packetRead.checkSum2) {
-    hardwareSerial->println(F("ERROR! RESEND PACKET"));
+    printlnLog(F("ERROR! RESEND PACKET"));
     return false;
   }
 
@@ -504,7 +504,7 @@ bool TcpProtocol::formatReceiveData(char *bData) {
   }
 
   strcpy(orderedPackets[packetRead.bOffset], packetRead.bData);
-  hardwareSerial->println(orderedPackets[packetRead.bOffset]);
+  printlnLog(orderedPackets[packetRead.bOffset]);
   return true;
 }
 
@@ -521,8 +521,8 @@ int TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
     waitRead();
     memset(bData, '\0', sizeof(char) * bDataLength);
     softwareSerial_readBytes(bData, bDataLength);
-    hardwareSerial->println(F("READ:"));
-    hardwareSerial->println(bData);
+    printlnLog(F("READ:"));
+    printlnLog(bData);
 
     bool isPacketOk = formatReceiveData(bData);
 
@@ -534,8 +534,8 @@ int TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
     formatSendConnectionData(connectionPacket, packetLength);
 
     softwareSerial->write(connectionPacket, strlen(connectionPacket));
-    hardwareSerial->println(F("WRITE:"));
-    hardwareSerial->println(connectionPacket);
+    printlnLog(F("WRITE:"));
+    printlnLog(connectionPacket);
     delay(10);
 
   } while (packetRead.bOffset + 1 < packetRead.bNumber);
@@ -569,7 +569,7 @@ int TcpProtocol::read(char *dataToReceive, int &UAID) {
   }
 
   softwareSerial->listen();
-  hardwareSerial->println(F("\nRECEIVING:"));
+  printlnLog(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
   return receiveData(dataToReceive, UAID);
 }
@@ -590,7 +590,7 @@ int TcpProtocol::serverClose() {
     return Error::FINISHED;
   }
 
-  hardwareSerial->println(F("\nSERVER CLOSE:"));
+  printlnLog(F("\nSERVER CLOSE:"));
 
   softwareSerial->listen();
 
@@ -627,7 +627,7 @@ int TcpProtocol::serverClose() {
       formatSendConnectionData(packet, packetLength);
       softwareSerial->write(packet, strlen(packet));
 
-      hardwareSerial->println(F("FIN Server Connection"));
+      printlnLog(F("FIN Server Connection"));
       connection.setStatus(Connection::FINISHED);
       return Error::CLOSED_CONN;
     } else {
@@ -656,7 +656,7 @@ int TcpProtocol::clientClose() {
     return Error::FINISHED;
   }
 
-  hardwareSerial->println(F("CLIENT CLOSE:"));
+  printlnLog(F("CLIENT CLOSE:"));
 
   softwareSerial->listen();
   int packetLength = TcpConnection::BLOCK_SIZE;
@@ -693,7 +693,7 @@ int TcpProtocol::clientClose() {
     formatReceiveConnectionData(packet);
 
     if (packetConnectionRead.syn == 0 && packetConnectionRead.ack == packetConnectionWrite.ack + 1) {
-      hardwareSerial->println(F("FIN Client Connection"));
+      printlnLog(F("FIN Client Connection"));
       connection.setStatus(Connection::FINISHED);
       return Error::CLOSED_CONN;
 
