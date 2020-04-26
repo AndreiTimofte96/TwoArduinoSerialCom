@@ -35,6 +35,7 @@ class ArduinoSerialCom {
   void addOffsetToCharArray(char *str, int length);
   void computeChecksum(char *data, int &checkSum1, int &checkSum2);
   bool hasPacketErrors(char *data, int _checkSum1, int _checkSum2);
+  void whileForever();
 
   // char specialChr[2] = "\f";
   char specialChr[2] = ",";

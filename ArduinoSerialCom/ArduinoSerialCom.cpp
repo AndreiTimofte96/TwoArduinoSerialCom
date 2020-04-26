@@ -111,3 +111,8 @@ int ArduinoSerialCom::getUniqueArduinoIDFromEEEPROM() {
 
   return atoi(UAID);
 }
+
+void ArduinoSerialCom::whileForever() {
+  while (1)
+    ;
+}

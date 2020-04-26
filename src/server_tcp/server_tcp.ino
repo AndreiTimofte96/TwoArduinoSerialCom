@@ -41,49 +41,61 @@ bool checkConnectedClient(int clientUAID) {
 }
 
 void loop() {
-  clients[0].UAID = tcpProtocol1.listen();
-  clients[1].UAID = tcpProtocol2.listen();
+  if ((clients[0].UAID = tcpProtocol1.listen()) < 0) {
+    tcpProtocol1.printLastError();
+  }
+  if ((clients[1].UAID = tcpProtocol2.listen()) < 0) {
+    tcpProtocol2.printLastError();
+  }
 
   int ok = 2;
+  int length;
   while (ok) {
     ok--;
-    if (!tcpProtocol1.read(dataToReceive, destinationUAID)) {
+    if ((length = tcpProtocol1.read(dataToReceive, destinationUAID)) < 0) {
       tcpProtocol1.printLastError();
     }
     Serial.println("\nRECEIVED DATA FROM CLIENT 1:");
     Serial.println(dataToReceive);
     Serial.println(destinationUAID);
+    Serial.println(length);
 
     if (checkConnectedClient(destinationUAID)) {
-      if (!tcpProtocol2.write(dataToReceive, clients[0].UAID)) {
+      if ((length = tcpProtocol2.write(dataToReceive, clients[0].UAID)) < 0) {
         tcpProtocol2.printLastError();
       }
-
-      if (!tcpProtocol2.read(dataToReceive, destinationUAID)) {
+      if ((length = tcpProtocol2.read(dataToReceive, destinationUAID)) < 0) {
         tcpProtocol2.printLastError();
       }
       Serial.println("\nRECEIVED DATA FROM CLIENT 2:");
       Serial.println(dataToReceive);
 
       if (checkConnectedClient(destinationUAID)) {
-        if (!tcpProtocol1.write(dataToReceive, clients[1].UAID)) {
+        if ((length = tcpProtocol1.write(dataToReceive, clients[1].UAID)) < 0) {
           tcpProtocol1.printLastError();
         }
       } else {
         // invalid clientUAID
-        if (!tcpProtocol2.write(clientUAIDError, serverUAID)) {
+        if ((length = tcpProtocol2.write(clientUAIDError, serverUAID)) < 0) {
           tcpProtocol2.printLastError();
         }
       }
     } else {
       // invalid clientUAID
-      if (!tcpProtocol1.write(clientUAIDError, serverUAID)) {
+      if ((length = tcpProtocol1.write(clientUAIDError, serverUAID)) < 0) {
         tcpProtocol1.printLastError();
       }
     }
   }
-  tcpProtocol1.serverClose();
-  tcpProtocol2.serverClose();
+
+  if (tcpProtocol1.serverClose() < 0) {
+    tcpProtocol1.printLastError();
+  }  // else
+
+  if (tcpProtocol2.serverClose() < 0) {
+    tcpProtocol2.printLastError();
+  }  // else
+
   while (1)
     ;
 }

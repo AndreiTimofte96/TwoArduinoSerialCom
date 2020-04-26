@@ -27,10 +27,15 @@ String str;
 int strLength;
 
 void loop() {
+  if (udpProtocol.connect() < 0) {
+    udpProtocol.printLastError();
+  }
+
   int ok = 2;
+  int length;
   while (ok) {
     ok--;
-    if (!udpProtocol.read(dataToReceive, fromUAID)) {
+    if ((length = udpProtocol.read(dataToReceive, fromUAID)) < 0) {
       udpProtocol.printLastError();
     }
 
@@ -38,6 +43,7 @@ void loop() {
     Serial.print(fromUAID);
     Serial.println(":");
     Serial.println(dataToReceive);
+    Serial.println(length);
     Serial.println();
 
     while (!Serial.available())
@@ -49,12 +55,16 @@ void loop() {
 
     Serial.println(userInput);
 
-    if (!udpProtocol.write(userInput, receiver[0].UAID)) {
+    if ((length = udpProtocol.write(userInput, receiver[0].UAID)) < 0) {
       udpProtocol.printLastError();
     }
+    Serial.println("WRITE LENGTH");
+    Serial.println(length);
   }
 
-  udpProtocol.clientClose();
+  if (udpProtocol.clientClose() < 0) {
+    udpProtocol.printLastError();
+  }
   while (1)
     ;
 }

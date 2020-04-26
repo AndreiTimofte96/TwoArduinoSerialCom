@@ -35,34 +35,46 @@ void setup() {
 }
 
 void loop() {
+  if (udpProtocol1.connect() < 0) {
+    udpProtocol1.printLastError();
+  }
+  if (udpProtocol2.connect() < 0) {
+    udpProtocol2.printLastError();
+  }
+
   int ok = 2;
+  int length;
   while (ok) {
     ok--;
 
-    if (!udpProtocol1.read(dataToReceive, fromUAID, toUAID)) {
+    if ((length = udpProtocol1.read(dataToReceive, fromUAID, toUAID)) < 0) {
       udpProtocol1.printLastError();
     }
     Serial.println("\nRECEIVED DATA FROM CLIENT 1:");
     Serial.println(dataToReceive);
     Serial.println(fromUAID);
 
-    if (!udpProtocol2.write(dataToReceive, fromUAID, toUAID)) {
+    if ((length = udpProtocol2.write(dataToReceive, fromUAID, toUAID)) < 0) {
       udpProtocol2.printLastError();
     }
 
-    if (!udpProtocol2.read(dataToReceive, fromUAID, toUAID)) {
+    if ((length = udpProtocol2.read(dataToReceive, fromUAID, toUAID)) < 0) {
       udpProtocol2.printLastError();
     }
     Serial.println("\nRECEIVED DATA FROM CLIENT 2:");
     Serial.println(fromUAID);
 
-    if (!udpProtocol1.write(dataToReceive, fromUAID, toUAID)) {
+    if ((length = udpProtocol1.write(dataToReceive, fromUAID, toUAID)) < 0) {
       udpProtocol1.printLastError();
     }
   }
 
-  udpProtocol1.serverClose();
-  udpProtocol2.serverClose();
+  if (udpProtocol1.serverClose() < 0) {
+    udpProtocol1.printLastError();
+  }
+  if (udpProtocol2.serverClose() < 0) {
+    udpProtocol2.printLastError();
+  }
   while (1)
     ;
 }

@@ -28,14 +28,15 @@ String str;
 int strLength;
 
 void loop() {
-  if (!tcpProtocol.connect()) {
+  if (tcpProtocol.connect() < 0) {
     tcpProtocol.printLastError();
   }
 
   int ok = 2;
+  int length;
   while (ok) {
     ok--;
-    if (!tcpProtocol.read(dataToReceive, destinationUAID)) {
+    if ((length = tcpProtocol.read(dataToReceive, destinationUAID)) < 0) {
       tcpProtocol.printLastError();
     }
 
@@ -43,23 +44,28 @@ void loop() {
     Serial.print(destinationUAID);
     Serial.println(":");
     Serial.println(dataToReceive);
+    Serial.println(length);
     Serial.println();
 
     while (!Serial.available())
       ;
     str = Serial.readStringUntil('\n');
     strLength = str.length();
-    char userStr[strLength + 1];
-    str.toCharArray(userStr, strLength + 1);
+    char userInput[strLength + 1];
+    str.toCharArray(userInput, strLength + 1);
 
-    Serial.println(userStr);
+    Serial.println(userInput);
 
-    if (!tcpProtocol.write(userStr, receiver[0].UAID)) {
+    if ((length = tcpProtocol.write(userInput, receiver[0].UAID)) < 0) {
       tcpProtocol.printLastError();
     }
+    Serial.println("WRITE LENGTH");
+    Serial.println(length);
   }
 
-  tcpProtocol.clientClose();
+  if (tcpProtocol.clientClose() < 0) {
+    tcpProtocol.printLastError();
+  }  // else
   while (1)
     ;
 }
