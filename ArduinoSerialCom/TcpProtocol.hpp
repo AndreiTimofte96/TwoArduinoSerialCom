@@ -12,8 +12,6 @@ class TcpProtocol : public ArduinoSerialCom {
   char **orderedPackets;
   char *dataSendEncodedString;
 
-  void whileForever();
-
   bool formatReceiveData(char *bData);
   int receiveData(char *dataToReceive, int &UAID);
 

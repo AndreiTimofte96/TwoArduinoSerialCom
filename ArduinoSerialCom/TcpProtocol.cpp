@@ -9,11 +9,6 @@ TcpProtocol::TcpProtocol() {
   // connection.setStatus(Connection::CONNECTED);  // for debugging purposes
 }
 
-void TcpProtocol::whileForever() {
-  while (1)
-    ;
-}
-
 int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
   if (connection.getStatus() == Connection::ERROR) {
     whileForever();

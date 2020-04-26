@@ -1,9 +1,25 @@
 #include "UdpProtocol.hpp"
 
 UdpProtocol::UdpProtocol() {
-  connection.setStatus(Connection::CONNECTED);
+  connection.setStatus(Connection::DISCONNECTED);
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
+}
+
+int UdpProtocol::connect() {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::CONNECT_PROTOCOL_PROTOCOL_HAS_FINISHED);
+    return Error::FINISHED;
+  }
+  if (connection.getStatus() == Connection::CONNECTED) {
+    return Error::CONNECTED;
+  }
+  connection.setStatus(Connection::CONNECTED);
+  return Error::CONNECTED;
 }
 
 void UdpProtocol::formatSendData(char *packet, int length) {
@@ -25,7 +41,7 @@ void UdpProtocol::formatSendData(char *packet, int length) {
   strcat(packet, packetWrite.bData);
 }
 
-void UdpProtocol::sendData(char *dataToSend, int fromUAID, int toUAID) {
+int UdpProtocol::sendData(char *dataToSend, int fromUAID, int toUAID) {
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
   packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
@@ -65,30 +81,46 @@ void UdpProtocol::sendData(char *dataToSend, int fromUAID, int toUAID) {
     free(packet);
     free(packetWrite.bData);
   }
+
+  return strlen(dataToSend);
 }
 
-bool UdpProtocol::write(char *dataToSend, int toUAID) {
-  if (connection.getStatus() != Connection::CONNECTED) {
+int UdpProtocol::write(char *dataToSend, int toUAID) {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
     error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return false;
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
   }
 
   softwareSerial->listen();
   hardwareSerial->println(F("\nSENDING:"));
-  sendData(dataToSend, -1, toUAID);
-  return true;
+  return sendData(dataToSend, -1, toUAID);
 }
 
-bool UdpProtocol::write(char *dataToSend, int fromUAID, int toUAID) {
-  if (connection.getStatus() != Connection::CONNECTED) {
+int UdpProtocol::write(char *dataToSend, int fromUAID, int toUAID) {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
     error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return false;
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
   }
 
   softwareSerial->listen();
   hardwareSerial->println(F("\nSENDING:"));
-  sendData(dataToSend, fromUAID, toUAID);
-  return true;
+  return sendData(dataToSend, fromUAID, toUAID);
 }
 
 void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
@@ -131,7 +163,7 @@ void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
   }
 }
 
-void UdpProtocol::receiveData(char *dataToReceive, int &fromUAID, int &toUAID) {
+int UdpProtocol::receiveData(char *dataToReceive, int &fromUAID, int &toUAID) {
   int bDataLength = UdpPacket::BLOCK_SIZE;
   char *bData;
   bData = (char *)malloc(sizeof(char) * bDataLength + 1);
@@ -148,43 +180,86 @@ void UdpProtocol::receiveData(char *dataToReceive, int &fromUAID, int &toUAID) {
   fromUAID = packetRead.fromUAID;
   toUAID = packetRead.toUAID;
   free(bData);
+
+  return strlen(dataToReceive);
 }
 
-bool UdpProtocol::read(char *dataToReceive, int &fromUAID) {
-  if (connection.getStatus() != Connection::CONNECTED) {
+int UdpProtocol::read(char *dataToReceive, int &fromUAID) {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
     error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return false;
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
   }
 
   softwareSerial->listen();
   hardwareSerial->println(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
   int toUAID;
-  receiveData(dataToReceive, fromUAID, toUAID);
-  return true;
+  return receiveData(dataToReceive, fromUAID, toUAID);
 }
 
-bool UdpProtocol::read(char *dataToReceive, int &fromUAID, int &toUAID) {
-  if (connection.getStatus() != Connection::CONNECTED) {
+int UdpProtocol::read(char *dataToReceive, int &fromUAID, int &toUAID) {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
     error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return false;
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
   }
 
   softwareSerial->listen();
   hardwareSerial->println(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
-  receiveData(dataToReceive, fromUAID, toUAID);
-  return true;
+  return receiveData(dataToReceive, fromUAID, toUAID);
 }
 
-void UdpProtocol::serverClose() {
+int UdpProtocol::serverClose() {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
+  }
+
   hardwareSerial->println(F("SERVER CLOSE:"));
   connection.setStatus(Connection::FINISHED);
   hardwareSerial->println(F("FIN Server Connection"));
 }
 
-void UdpProtocol::clientClose() {
+int UdpProtocol::clientClose() {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
+  }
+
   hardwareSerial->println(F("CLIENT CLOSE:"));
   connection.setStatus(Connection::FINISHED);
   hardwareSerial->println(F("FIN Client Connection"));
+  return Error::CLOSED_CONN;
 }
