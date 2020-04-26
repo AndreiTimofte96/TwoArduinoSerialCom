@@ -9,16 +9,22 @@ TcpProtocol::TcpProtocol() {
   // connection.setStatus(Connection::CONNECTED);  // for debugging purposes
 }
 
+void TcpProtocol::whileForever() {
+  while (1)
+    ;
+}
+
 int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
   if (connection.getStatus() == Connection::FINISHED) {
     error.setError(Error::CONNECT_PROTOCOL_PROTOCOL_HAS_FINISHED);
-    return -1;  // means that we have an error
-  }
-  if (connection.getStatus() == Connection::ERROR) {
-    return -1;
+    return Error::FINISHED;
   }
   if (connection.getStatus() == Connection::CONNECTED) {
-    return 0;  // means that is good
+    return Error::CONNECTED;
   }
 
   hardwareSerial->println(F("\nLISTEN"));
@@ -68,8 +74,8 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
         hardwareSerial->println(clientUAID);
       } else {
         hardwareSerial->print(F("CONNECTION SERVER SIDE FAILED"));
-        connection.setStatus(Connection::DISCONNECTED);
-        error.setError(Error::CONNECT_INTERNAL_ERROR);
+        connection.setStatus(Connection::DISCONNECTED);  // special case because while forever loop
+        error.setError(Error::LISTEN_INTERNAL_ERROR);
       }
 
     } else {
@@ -85,8 +91,8 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
       delay(10);
 
       hardwareSerial->print(F("CONNECTION SERVER SIDE FAILED"));
-      connection.setStatus(Connection::DISCONNECTED);
-      error.setError(Error::CONNECT_INTERNAL_ERROR);
+      connection.setStatus(Connection::DISCONNECTED);  // special case because while forever loop
+      error.setError(Error::LISTEN_INTERNAL_ERROR);
     }
   }
 
@@ -96,16 +102,17 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
   return clientUAID;
 }
 
-bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
+int TcpProtocol::connect() {  // THREE WAY HANDSHAKE
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
   if (connection.getStatus() == Connection::FINISHED) {
     error.setError(Error::CONNECT_PROTOCOL_PROTOCOL_HAS_FINISHED);
-    return false;
-  }
-  if (connection.getStatus() == Connection::ERROR) {
-    return false;
+    return Error::FINISHED;
   }
   if (connection.getStatus() == Connection::CONNECTED) {
-    return true;  // means that is good
+    return Error::CONNECTED;
   }
 
   hardwareSerial->println(F("\nCONNECT"));
@@ -155,7 +162,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
 
     hardwareSerial->println(F("CONNECTION CLIENT SIDE ESTABLISHED"));
     connection.setStatus(Connection::CONNECTED);
-    return true;
+    return Error::CONNECTED;
   }
 
   free(bData);
@@ -163,7 +170,7 @@ bool TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   hardwareSerial->println(F("CONNECTION CLIENT SIDE FAILED"));
   connection.setStatus(Connection::ERROR);
   error.setError(Error::CONNECT_INTERNAL_ERROR);
-  return false;
+  return Error::ERROR;
 }
 
 void TcpProtocol::formatReceiveConnectionData(char *bData) {
@@ -185,119 +192,6 @@ void TcpProtocol::formatSendConnectionData(char *packet, int packetLength) {
   addNumberToCharArray(packetConnectionWrite.syn, packet);
 
   addOffsetToCharArray(packet, packetLength);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////
-
-void TcpProtocol::serverClose() {
-  if (connection.getStatus() != Connection::CONNECTED) {
-    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return;
-  }
-
-  hardwareSerial->println(F("\nSERVER CLOSE:"));
-
-  softwareSerial->listen();
-
-  packetConnectionWrite.seq = 0;
-  packetConnectionWrite.ack = getUniqueArduinoIDFromEEEPROM();
-  packetConnectionWrite.syn = 3;  // /ACK:0, SEQ:1 CON:2 FIN:3
-
-  int packetLength = TcpConnection::BLOCK_SIZE;
-  char *packet;
-  packet = (char *)malloc(sizeof(char) * packetLength + 1);
-
-  memset(packet, '\0', sizeof(char) * packetLength + 1);
-  formatSendConnectionData(packet, packetLength);
-  softwareSerial->write(packet, strlen(packet));
-
-  delay(10);
-  waitRead();
-  memset(packet, '\0', sizeof(char) * packetLength + 1);
-  softwareSerial_readBytes(packet, packetLength);
-  formatReceiveConnectionData(packet);
-
-  if (packetConnectionRead.syn == 0 && packetConnectionRead.ack == packetConnectionWrite.ack + 1) {
-    waitRead();
-    memset(packet, '\0', sizeof(char) * packetLength + 1);
-    softwareSerial_readBytes(packet, packetLength);
-    formatReceiveConnectionData(packet);
-
-    if (packetConnectionRead.syn == 3 && packetConnectionRead.ack != 0) {
-      packetConnectionWrite.seq = 0;
-      packetConnectionWrite.ack = packetConnectionRead.ack + 1;
-      packetConnectionWrite.syn = 0;  // /ACK:0, SYN:1 CON: 2 FIN:3
-
-      memset(packet, '\0', sizeof(char) * packetLength + 1);
-      formatSendConnectionData(packet, packetLength);
-      softwareSerial->write(packet, strlen(packet));
-
-      hardwareSerial->println(F("FIN Server Connection"));
-      connection.setStatus(Connection::FINISHED);
-    } else {
-      connection.setStatus(Connection::ERROR);
-      error.setError(Error::CONNECT_INTERNAL_ERROR);
-    }
-  } else {
-    connection.setStatus(Connection::ERROR);
-    error.setError(Error::CONNECT_INTERNAL_ERROR);
-  }
-}
-
-void TcpProtocol::clientClose() {
-  if (connection.getStatus() != Connection::CONNECTED) {
-    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return;
-  }
-
-  hardwareSerial->println(F("CLIENT CLOSE:"));
-
-  softwareSerial->listen();
-  int packetLength = TcpConnection::BLOCK_SIZE;
-
-  char *packet;
-  packet = (char *)malloc(sizeof(char) * packetLength + 1);
-
-  waitRead();
-  softwareSerial_readBytes(packet, packetLength);
-  formatReceiveConnectionData(packet);
-
-  if (packetConnectionRead.syn == 3 && packetConnectionRead.ack != 0) {
-    packetConnectionWrite.seq = 0;
-    packetConnectionWrite.ack = packetConnectionRead.ack + 1;
-    packetConnectionWrite.syn = 0;  // /ACK:0, SYN:1 CON: 2 FIN:3
-
-    memset(packet, '\0', sizeof(char) * packetLength + 1);
-    formatSendConnectionData(packet, packetLength);
-    softwareSerial->write(packet, strlen(packet));
-    delay(10);
-
-    packetConnectionWrite.seq = 0;
-    packetConnectionWrite.ack = getUniqueArduinoIDFromEEEPROM();
-    packetConnectionWrite.syn = 3;  // /ACK:0, SYN:1 CON: 2 FIN:3
-
-    memset(packet, '\0', sizeof(char) * packetLength + 1);
-    formatSendConnectionData(packet, packetLength);
-    softwareSerial->write(packet, strlen(packet));
-    delay(10);
-
-    waitRead();
-    memset(packet, '\0', sizeof(char) * packetLength + 1);
-    softwareSerial_readBytes(packet, packetLength);
-    formatReceiveConnectionData(packet);
-
-    if (packetConnectionRead.syn == 0 && packetConnectionRead.ack == packetConnectionWrite.ack + 1) {
-      hardwareSerial->println(F("FIN Client Connection"));
-      connection.setStatus(Connection::FINISHED);
-
-    } else {
-      connection.setStatus(Connection::ERROR);
-      error.setError(Error::CONNECT_INTERNAL_ERROR);
-    }
-  } else {
-    connection.setStatus(Connection::ERROR);
-    error.setError(Error::CONNECT_INTERNAL_ERROR);
-  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -467,7 +361,7 @@ void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
 
 ////////////////////// HAMMMING DISTANCE CODE ENCODING METHOD ////////////
 
-void TcpProtocol::sendData(char *dataToSend, int UAID) {
+int TcpProtocol::sendData(char *dataToSend, int UAID) {
   packetWrite.pSize = TcpPacket::BLOCK_SIZE;
   packetWrite.bLength = TcpPacket::BLOCK_BODY_SIZE - 1;
   packetWrite.bNumber = strlen(dataToSend) / packetWrite.bLength;
@@ -545,18 +439,27 @@ void TcpProtocol::sendData(char *dataToSend, int UAID) {
     }
     free(packet);
   }
+
+  return strlen(dataToSend);
 }
 
-bool TcpProtocol::write(char *dataToSend, int UAID) {
-  if (connection.getStatus() != Connection::CONNECTED) {
+int TcpProtocol::write(char *dataToSend, int UAID) {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
     error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return false;
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
   }
 
   softwareSerial->listen();
   hardwareSerial->println(F("\nSENDING:"));
-  sendData(dataToSend, UAID);
-  return true;
+  return sendData(dataToSend, UAID);
 }
 
 /////////////////////////////////////////////////////////////
@@ -610,7 +513,7 @@ bool TcpProtocol::formatReceiveData(char *bData) {
   return true;
 }
 
-void TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
+int TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
   int bDataLength = TcpPacket::BLOCK_SIZE;
   char *bData;
   bData = (char *)malloc(sizeof(char) * bDataLength + 1);
@@ -652,16 +555,161 @@ void TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
   free(orderedPackets);
 
   UAID = packetRead.UAID;
+
+  return strlen(dataToReceive);
 }
 
-bool TcpProtocol::read(char *dataToReceive, int &UAID) {
-  if (connection.getStatus() != Connection::CONNECTED) {
-    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return false;
+int TcpProtocol::read(char *dataToReceive, int &UAID) {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
   }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
+    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
+  }
+
   softwareSerial->listen();
   hardwareSerial->println(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
-  receiveData(dataToReceive, UAID);
-  return true;
+  return receiveData(dataToReceive, UAID);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+int TcpProtocol::serverClose() {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
+  }
+
+  hardwareSerial->println(F("\nSERVER CLOSE:"));
+
+  softwareSerial->listen();
+
+  packetConnectionWrite.seq = 0;
+  packetConnectionWrite.ack = getUniqueArduinoIDFromEEEPROM();
+  packetConnectionWrite.syn = 3;  // /ACK:0, SEQ:1 CON:2 FIN:3
+
+  int packetLength = TcpConnection::BLOCK_SIZE;
+  char *packet;
+  packet = (char *)malloc(sizeof(char) * packetLength + 1);
+
+  memset(packet, '\0', sizeof(char) * packetLength + 1);
+  formatSendConnectionData(packet, packetLength);
+  softwareSerial->write(packet, strlen(packet));
+
+  delay(10);
+  waitRead();
+  memset(packet, '\0', sizeof(char) * packetLength + 1);
+  softwareSerial_readBytes(packet, packetLength);
+  formatReceiveConnectionData(packet);
+
+  if (packetConnectionRead.syn == 0 && packetConnectionRead.ack == packetConnectionWrite.ack + 1) {
+    waitRead();
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    softwareSerial_readBytes(packet, packetLength);
+    formatReceiveConnectionData(packet);
+
+    if (packetConnectionRead.syn == 3 && packetConnectionRead.ack != 0) {
+      packetConnectionWrite.seq = 0;
+      packetConnectionWrite.ack = packetConnectionRead.ack + 1;
+      packetConnectionWrite.syn = 0;  // /ACK:0, SYN:1 CON: 2 FIN:3
+
+      memset(packet, '\0', sizeof(char) * packetLength + 1);
+      formatSendConnectionData(packet, packetLength);
+      softwareSerial->write(packet, strlen(packet));
+
+      hardwareSerial->println(F("FIN Server Connection"));
+      connection.setStatus(Connection::FINISHED);
+      return Error::CLOSED_CONN;
+    } else {
+      connection.setStatus(Connection::ERROR);
+      error.setError(Error::SERVER_CLOSE_INTERNAL_ERROR);
+      return Error::ERROR;
+    }
+  } else {
+    connection.setStatus(Connection::ERROR);
+    error.setError(Error::SERVER_CLOSE_INTERNAL_ERROR);
+    return Error::ERROR;
+  }
+}
+
+int TcpProtocol::clientClose() {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(Error::CLOSE_PROTOCOL_NOT_CONNECTED_ERROR);
+    return Error::FINISHED;
+  }
+
+  hardwareSerial->println(F("CLIENT CLOSE:"));
+
+  softwareSerial->listen();
+  int packetLength = TcpConnection::BLOCK_SIZE;
+
+  char *packet;
+  packet = (char *)malloc(sizeof(char) * packetLength + 1);
+
+  waitRead();
+  softwareSerial_readBytes(packet, packetLength);
+  formatReceiveConnectionData(packet);
+
+  if (packetConnectionRead.syn == 3 && packetConnectionRead.ack != 0) {
+    packetConnectionWrite.seq = 0;
+    packetConnectionWrite.ack = packetConnectionRead.ack + 1;
+    packetConnectionWrite.syn = 0;  // /ACK:0, SYN:1 CON: 2 FIN:3
+
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    formatSendConnectionData(packet, packetLength);
+    softwareSerial->write(packet, strlen(packet));
+    delay(10);
+
+    packetConnectionWrite.seq = 0;
+    packetConnectionWrite.ack = getUniqueArduinoIDFromEEEPROM();
+    packetConnectionWrite.syn = 3;  // /ACK:0, SYN:1 CON: 2 FIN:3
+
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    formatSendConnectionData(packet, packetLength);
+    softwareSerial->write(packet, strlen(packet));
+    delay(10);
+
+    waitRead();
+    memset(packet, '\0', sizeof(char) * packetLength + 1);
+    softwareSerial_readBytes(packet, packetLength);
+    formatReceiveConnectionData(packet);
+
+    if (packetConnectionRead.syn == 0 && packetConnectionRead.ack == packetConnectionWrite.ack + 1) {
+      hardwareSerial->println(F("FIN Client Connection"));
+      connection.setStatus(Connection::FINISHED);
+      return Error::CLOSED_CONN;
+
+    } else {
+      connection.setStatus(Connection::ERROR);
+      error.setError(Error::CLIENT_CLOSE_INTERNAL_ERROR);
+      return Error::ERROR;
+    }
+  } else {
+    connection.setStatus(Connection::ERROR);
+    error.setError(Error::CLIENT_CLOSE_INTERNAL_ERROR);
+    return Error::ERROR;
+  }
 }
