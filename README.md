@@ -181,7 +181,7 @@ void loop() {
   Serial.println(dataToReceive);
   Serial.println(length);
 
-  if ((length = myProtocol.write(dataToReceive, destinationUAID)) < 0) {
+  if ((length = myProtocol.write(dataToSend, destinationUAID)) < 0) {
     myProtocol.printLastError();
   }
 
