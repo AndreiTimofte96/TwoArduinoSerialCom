@@ -35,13 +35,6 @@ void setup() {
 }
 
 void loop() {
-  if (udpProtocol1.connect() < 0) {
-    udpProtocol1.printLastError();
-  }
-  if (udpProtocol2.connect() < 0) {
-    udpProtocol2.printLastError();
-  }
-
   int ok = 2;
   int length;
   while (ok) {
@@ -68,15 +61,6 @@ void loop() {
       udpProtocol1.printLastError();
     }
   }
-
-  if (udpProtocol1.serverClose() < 0) {
-    udpProtocol1.printLastError();
-  }
-  if (udpProtocol2.serverClose() < 0) {
-    udpProtocol2.printLastError();
-  }
-  while (1)
-    ;
 }
 
 // char dataToSendOption1[] = "Ana are mere si gutui si tata are pere si eu vreau sa le mananc pe toate. Unu doi trei patru cinci sase sapte opt noua zece.";

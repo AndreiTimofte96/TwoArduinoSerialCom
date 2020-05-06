@@ -53,5 +53,5 @@ class ArduinoSerialCom {
   char specialChr[2] = ",";
 
   // arduinoSerialComProtocols protocol;
-  void setUniqueArduinoIDToEEPROM(char *UAID);  // unique arduino identifier
+  static void setUniqueArduinoIDToEEPROM(char *UAID);  // unique arduino identifier
 };

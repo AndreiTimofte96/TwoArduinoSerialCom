@@ -1,14 +1,14 @@
 #include <math.h>
 
 #include "ArduinoSerialCom.hpp"
-#include "TcpConnection.hpp"
+#include "TcpConnectionPacket.hpp"
 #include "TcpPacket.hpp"
 
 class TcpProtocol : public ArduinoSerialCom {
   TcpPacket packetRead;
   TcpPacket packetWrite;
-  TcpConnection packetConnectionRead;
-  TcpConnection packetConnectionWrite;
+  TcpConnectionPacket packetConnectionRead;
+  TcpConnectionPacket packetConnectionWrite;
   char **orderedPackets;
   char *dataSendEncodedString;
 
@@ -21,8 +21,8 @@ class TcpProtocol : public ArduinoSerialCom {
   void formatSendData(char *packet, int length, int checkSum1, int checkSum2);
   int sendData(char *dataToSend, int UAID);
 
-  void encodeWitHammingDistanceCode(char *dataSendString);
-  void decodeWitHammingDistanceCode(char *dataSendEncodedString);
+  void encodeWithHammingDistanceCode(char *dataSendString);
+  void decodeWithHammingDistanceCode(char *dataSendEncodedString);
 
   void baseTwoToChar(int *bits, int length, char *str);
   void charToBaseTwo(char *str, int *bits);

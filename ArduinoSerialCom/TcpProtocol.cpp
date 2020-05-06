@@ -24,8 +24,8 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
   printlnLog(F("\nLISTEN"));
   softwareSerial->listen();
-  int bDataLength = TcpConnection::BLOCK_SIZE;
-  int packetLength = TcpConnection::BLOCK_SIZE;
+  int bDataLength = TcpConnectionPacket::BLOCK_SIZE;
+  int packetLength = TcpConnectionPacket::BLOCK_SIZE;
 
   char *bData, *packet;
   bData = (char *)malloc(sizeof(char) * bDataLength + 1);
@@ -53,7 +53,7 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
       softwareSerial->write(packet, strlen(packet));
 
-      delay(10);
+      delay(1);
 
       waitRead();
       memset(bData, '\0', sizeof(char) * bDataLength);
@@ -83,7 +83,7 @@ int TcpProtocol::listen() {  // THREE WAY HANDSHAKE
 
       softwareSerial->write(packet, strlen(packet));
 
-      delay(10);
+      delay(1);
 
       printLog(F("CONNECTION SERVER SIDE FAILED"));
       connection.setStatus(Connection::DISCONNECTED);  // special case because while forever loop
@@ -117,7 +117,7 @@ int TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   packetConnectionWrite.ack = 0;
   packetConnectionWrite.syn = 1;  // /ACK:0, SEQ:1 CON:2 FIN:3
 
-  int packetLength = TcpConnection::BLOCK_SIZE;
+  int packetLength = TcpConnectionPacket::BLOCK_SIZE;
   char *packet;
   packet = (char *)malloc(sizeof(char) * packetLength + 1);
 
@@ -127,10 +127,10 @@ int TcpProtocol::connect() {  // THREE WAY HANDSHAKE
   softwareSerial->write(packet, strlen(packet));
   printlnLog(packet);
 
-  delay(10);
+  delay(1);
 
   waitRead();
-  int bDataLength = TcpConnection::BLOCK_SIZE;
+  int bDataLength = TcpConnectionPacket::BLOCK_SIZE;
   char *bData;
   bData = (char *)malloc(sizeof(char) * bDataLength + 1);
 
@@ -153,7 +153,7 @@ int TcpProtocol::connect() {  // THREE WAY HANDSHAKE
 
     free(bData);
     free(packet);
-    delay(10);
+    delay(1);
 
     printlnLog(F("CONNECTION CLIENT SIDE ESTABLISHED"));
     connection.setStatus(Connection::CONNECTED);
@@ -237,7 +237,7 @@ void TcpProtocol::charToBaseTwo(char *str, int *bits) {
   }
 }
 
-void TcpProtocol::encodeWitHammingDistanceCode(char *dataSendString) {
+void TcpProtocol::encodeWithHammingDistanceCode(char *dataSendString) {
   int dataSendBits[140];  // 128 bits  + 8 parityBits => 136 bits -> fix 17 bytes
   int dataSendLength = TcpPacket::BLOCK_BODY_SIZE - 1;
   int parityBits = 8;
@@ -297,7 +297,7 @@ void TcpProtocol::encodeWitHammingDistanceCode(char *dataSendString) {
   free(dataSendEncodedString);
 }
 
-void TcpProtocol::decodeWitHammingDistanceCode(char *dataSendEncodedString) {
+void TcpProtocol::decodeWithHammingDistanceCode(char *dataSendEncodedString) {
   int dataSendEncodedBits[140];
   int dataSendLength = TcpPacket::BLOCK_BODY_SIZE - 1;
   int parityBits = 8;
@@ -395,7 +395,7 @@ int TcpProtocol::sendData(char *dataToSend, int UAID) {
 
     //encode data to send -> packetWrite.bData;
     printlnLog(packetWrite.bData);
-    encodeWitHammingDistanceCode(packetWrite.bData);
+    encodeWithHammingDistanceCode(packetWrite.bData);
     printlnLog(packetWrite.bData);
 
     if (blockIndex == packetWrite.bNumber - 1 && remainder) {
@@ -412,12 +412,12 @@ int TcpProtocol::sendData(char *dataToSend, int UAID) {
     SENT_ACK = false;
     while (SENT_ACK == false) {
       softwareSerial->write(packet, strlen(packet));
-      delay(10);
+      delay(1);
       printlnLog(F("WRITE:"));
       printlnLog(packet);
 
       waitRead();
-      int bDataConnectionLength = TcpConnection::BLOCK_SIZE;
+      int bDataConnectionLength = TcpConnectionPacket::BLOCK_SIZE;
       char bDataConnection[bDataConnectionLength];
       memset(bDataConnection, '\0', sizeof(char) * bDataConnectionLength);
 
@@ -485,7 +485,7 @@ bool TcpProtocol::formatReceiveData(char *bData) {
   pch = strtok(NULL, specialChr);
   packetRead.bData = pch;
 
-  decodeWitHammingDistanceCode(packetRead.bData);
+  decodeWithHammingDistanceCode(packetRead.bData);
   packetRead.bData[packetRead.bLength] = '\0';
 
   int checkSum1 = 0, checkSum2 = 0;
@@ -513,7 +513,7 @@ int TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
   char *bData;
   bData = (char *)malloc(sizeof(char) * bDataLength + 1);
 
-  int packetLength = TcpConnection::BLOCK_SIZE;
+  int packetLength = TcpConnectionPacket::BLOCK_SIZE;
   char *connectionPacket;
   connectionPacket = (char *)malloc(sizeof(char) * packetLength + 1);
 
@@ -536,7 +536,7 @@ int TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
     softwareSerial->write(connectionPacket, strlen(connectionPacket));
     printlnLog(F("WRITE:"));
     printlnLog(connectionPacket);
-    delay(10);
+    delay(1);
 
   } while (packetRead.bOffset + 1 < packetRead.bNumber);
 
@@ -598,7 +598,7 @@ int TcpProtocol::serverClose() {
   packetConnectionWrite.ack = getUniqueArduinoIDFromEEEPROM();
   packetConnectionWrite.syn = 3;  // /ACK:0, SEQ:1 CON:2 FIN:3
 
-  int packetLength = TcpConnection::BLOCK_SIZE;
+  int packetLength = TcpConnectionPacket::BLOCK_SIZE;
   char *packet;
   packet = (char *)malloc(sizeof(char) * packetLength + 1);
 
@@ -606,7 +606,7 @@ int TcpProtocol::serverClose() {
   formatSendConnectionData(packet, packetLength);
   softwareSerial->write(packet, strlen(packet));
 
-  delay(10);
+  delay(1);
   waitRead();
   memset(packet, '\0', sizeof(char) * packetLength + 1);
   softwareSerial_readBytes(packet, packetLength);
@@ -659,7 +659,7 @@ int TcpProtocol::clientClose() {
   printlnLog(F("CLIENT CLOSE:"));
 
   softwareSerial->listen();
-  int packetLength = TcpConnection::BLOCK_SIZE;
+  int packetLength = TcpConnectionPacket::BLOCK_SIZE;
 
   char *packet;
   packet = (char *)malloc(sizeof(char) * packetLength + 1);
@@ -676,7 +676,7 @@ int TcpProtocol::clientClose() {
     memset(packet, '\0', sizeof(char) * packetLength + 1);
     formatSendConnectionData(packet, packetLength);
     softwareSerial->write(packet, strlen(packet));
-    delay(10);
+    delay(1);
 
     packetConnectionWrite.seq = 0;
     packetConnectionWrite.ack = getUniqueArduinoIDFromEEEPROM();
@@ -685,7 +685,7 @@ int TcpProtocol::clientClose() {
     memset(packet, '\0', sizeof(char) * packetLength + 1);
     formatSendConnectionData(packet, packetLength);
     softwareSerial->write(packet, strlen(packet));
-    delay(10);
+    delay(1);
 
     waitRead();
     memset(packet, '\0', sizeof(char) * packetLength + 1);
