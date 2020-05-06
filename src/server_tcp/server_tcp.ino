@@ -95,6 +95,8 @@ void loop() {
   if (tcpProtocol2.serverClose() < 0) {
     tcpProtocol2.printLastError();
   }  // else
+  Serial.println(tcpProtocol1.getConnectionStatus());
+  Serial.println(tcpProtocol2.getConnectionStatus());
 
   while (1)
     ;

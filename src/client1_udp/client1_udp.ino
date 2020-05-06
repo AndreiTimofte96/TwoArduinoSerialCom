@@ -27,10 +27,6 @@ String str;
 int strLength;
 
 void loop() {
-  if (udpProtocol.connect() < 0) {
-    udpProtocol.printLastError();
-  }
-
   int ok = 2;
   int length;
   while (ok) {
@@ -62,10 +58,6 @@ void loop() {
     Serial.println();
   }
 
-  if (udpProtocol.clientClose() < 0) {
-    udpProtocol.printLastError();
-  }
-  Serial.println(udpProtocol.getConnectionStatus());
   while (1)
     ;
 }

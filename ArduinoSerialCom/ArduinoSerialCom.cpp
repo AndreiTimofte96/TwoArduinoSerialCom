@@ -109,9 +109,9 @@ int ArduinoSerialCom::getUniqueArduinoIDFromEEEPROM() {
     randomSeed(analogRead(0));
     long randId = random(1000, 9999);
     sprintf(UAID, "%d", randId);
-    ArduinoSerialCom asc;
-    asc.setUniqueArduinoIDToEEPROM(UAID);
-    delay(10);
+    // ArduinoSerialCom asc;
+    setUniqueArduinoIDToEEPROM(UAID);
+    delay(1);
     return atoi(UAID);
   }
   int index;

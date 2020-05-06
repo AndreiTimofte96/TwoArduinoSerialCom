@@ -1,7 +1,7 @@
 #include "UdpProtocol.hpp"
 
 UdpProtocol::UdpProtocol() {
-  connection.setStatus(Connection::DISCONNECTED);
+  connection.setStatus(Connection::CONNECTED);
   packetWrite.pSize = UdpPacket::BLOCK_SIZE;
   packetWrite.bLength = UdpPacket::BLOCK_BODY_SIZE;
 }
@@ -74,7 +74,7 @@ int UdpProtocol::sendData(char *dataToSend, int fromUAID, int toUAID) {
     formatSendData(packet, UdpPacket::BLOCK_HEADER_SIZE);
 
     softwareSerial->write(packet, strlen(packet));
-    delay(10);
+    delay(1);
     printlnLog(F("WRITE:"));
     printlnLog(packet);
 
