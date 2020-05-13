@@ -21,6 +21,8 @@ class TcpProtocol : public ArduinoSerialCom {
   void formatSendData(char *packet, int length, int checkSum1, int checkSum2);
   int sendData(char *dataToSend, int UAID);
 
+  int checkConnectionStatus(Error::errorMessages errorMessage);
+
   void encodeWithHammingDistanceCode(char *dataSendString);
   void decodeWithHammingDistanceCode(char *dataSendEncodedString);
 
@@ -30,8 +32,14 @@ class TcpProtocol : public ArduinoSerialCom {
 
  public:
   TcpProtocol();
-  int write(char *dataToSend, int UAID);     // UAID = catre cine trimiti
+  int write(char *dataToSend, int UAID);  // UAID = catre cine trimiti
+  int write(int dataToSend, int UAID);
+  int write(float dataToSend, int UAID);
+
   int read(char *dataToReceive, int &UAID);  // UAID = de la cine primesti
+  int read(int &dataToReceive, int &UAID);
+  int read(float &dataToReceive, int &UAID);
+
   int listen();
   int connect();
   int clientClose();
