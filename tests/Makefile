@@ -1,3 +1,3 @@
 all:
-		g++ hammingDistanceCode.cpp -o hammingDistanceCode
-		./hammingDistanceCode
+		g++ structToString.cpp -o structToString
+		./structToString
