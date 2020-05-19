@@ -438,22 +438,6 @@ int TcpProtocol::sendData(char *dataToSend, int UAID) {
   return strlen(dataToSend);
 }
 
-int TcpProtocol::checkConnectionStatus(Error::errorMessages errorMessage) {
-  if (connection.getStatus() == Connection::ERROR) {
-    whileForever();
-    return Error::ERROR;
-  }
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    error.setError(errorMessage);
-    return Error::DISCONNECTED;
-  }
-  if (connection.getStatus() == Connection::FINISHED) {
-    error.setError(errorMessage);
-    return Error::FINISHED;
-  }
-  return 1;
-}
-
 int TcpProtocol::write(char *dataToSend, int UAID) {
   int status = checkConnectionStatus(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
   if (status < 0) return status;

@@ -156,3 +156,19 @@ void ArduinoSerialCom::printlnLog(int log) {
 const char *ArduinoSerialCom::getConnectionStatus() {
   return connection.getStatusStringified();
 }
+
+int ArduinoSerialCom::checkConnectionStatus(Error::errorMessages errorMessage) {
+  if (connection.getStatus() == Connection::ERROR) {
+    whileForever();
+    return Error::ERROR;
+  }
+  if (connection.getStatus() == Connection::DISCONNECTED) {
+    error.setError(errorMessage);
+    return Error::DISCONNECTED;
+  }
+  if (connection.getStatus() == Connection::FINISHED) {
+    error.setError(errorMessage);
+    return Error::FINISHED;
+  }
+  return 1;
+}

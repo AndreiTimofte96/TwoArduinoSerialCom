@@ -49,6 +49,8 @@ class ArduinoSerialCom {
   void printlnLog(const __FlashStringHelper *log);
   void printlnLog(int log);
 
+  int checkConnectionStatus(Error::errorMessages errorMessage);
+
   // char specialChr[2] = "\f";
   char specialChr[2] = ",";
 
