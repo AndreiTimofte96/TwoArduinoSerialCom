@@ -439,24 +439,37 @@ int TcpProtocol::sendData(char *dataToSend, int UAID) {
 }
 
 int TcpProtocol::write(char *dataToSend, int UAID) {
-  if (connection.getStatus() == Connection::ERROR) {
-    whileForever();
-    return Error::ERROR;
-  }
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::DISCONNECTED;
-  }
-  if (connection.getStatus() == Connection::FINISHED) {
-    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::FINISHED;
-  }
+  int status = checkConnectionStatus(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
 
   softwareSerial->listen();
   printlnLog(F("\nSENDING:"));
   return sendData(dataToSend, UAID);
 }
 
+int TcpProtocol::write(int dataToSend, int UAID) {
+  int status = checkConnectionStatus(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
+
+  softwareSerial->listen();
+  printlnLog(F("\nSENDING:"));
+
+  char dataToSendString[11];
+  itoa(dataToSend, dataToSendString, 10);
+  return sendData(dataToSendString, UAID);
+}
+
+int TcpProtocol::write(float dataToSend, int UAID) {
+  int status = checkConnectionStatus(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
+
+  softwareSerial->listen();
+  printlnLog(F("\nSENDING:"));
+
+  String value = String(dataToSend);
+  char *dataToSendString = (char *)value.c_str();
+  return sendData(dataToSendString, UAID);
+}
 /////////////////////////////////////////////////////////////
 
 bool TcpProtocol::formatReceiveData(char *bData) {
@@ -555,23 +568,41 @@ int TcpProtocol::receiveData(char *dataToReceive, int &UAID) {
 }
 
 int TcpProtocol::read(char *dataToReceive, int &UAID) {
-  if (connection.getStatus() == Connection::ERROR) {
-    whileForever();
-    return Error::ERROR;
-  }
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::DISCONNECTED;
-  }
-  if (connection.getStatus() == Connection::FINISHED) {
-    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::FINISHED;
-  }
+  int status = checkConnectionStatus(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
 
   softwareSerial->listen();
   printlnLog(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
   return receiveData(dataToReceive, UAID);
+}
+
+int TcpProtocol::read(int &dataToReceive, int &UAID) {
+  int status = checkConnectionStatus(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
+
+  softwareSerial->listen();
+  printlnLog(F("\nRECEIVING:"));
+
+  char dataToReceiveString[11];
+  dataToReceiveString[0] = '\0';
+  int length = receiveData(dataToReceiveString, UAID);
+  dataToReceive = atoi(dataToReceiveString);
+  return length;
+}
+
+int TcpProtocol::read(float &dataToReceive, int &UAID) {
+  int status = checkConnectionStatus(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
+
+  softwareSerial->listen();
+  printlnLog(F("\nRECEIVING:"));
+
+  char dataToReceiveString[11];
+  dataToReceiveString[0] = '\0';
+  int length = receiveData(dataToReceiveString, UAID);
+  dataToReceive = atof(dataToReceiveString);
+  return length;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

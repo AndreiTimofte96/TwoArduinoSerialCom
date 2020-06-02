@@ -86,41 +86,48 @@ int UdpProtocol::sendData(char *dataToSend, int fromUAID, int toUAID) {
 }
 
 int UdpProtocol::write(char *dataToSend, int toUAID) {
-  if (connection.getStatus() == Connection::ERROR) {
-    whileForever();
-    return Error::ERROR;
-  }
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::DISCONNECTED;
-  }
-  if (connection.getStatus() == Connection::FINISHED) {
-    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::FINISHED;
-  }
-
-  softwareSerial->listen();
-  printlnLog(F("\nSENDING:"));
-  return sendData(dataToSend, -1, toUAID);
+  return write(dataToSend, -1, toUAID);
 }
 
 int UdpProtocol::write(char *dataToSend, int fromUAID, int toUAID) {
-  if (connection.getStatus() == Connection::ERROR) {
-    whileForever();
-    return Error::ERROR;
-  }
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::DISCONNECTED;
-  }
-  if (connection.getStatus() == Connection::FINISHED) {
-    error.setError(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::FINISHED;
-  }
+  int status = checkConnectionStatus(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
 
   softwareSerial->listen();
   printlnLog(F("\nSENDING:"));
   return sendData(dataToSend, fromUAID, toUAID);
+}
+
+int UdpProtocol::write(int dataToSend, int toUAID) {
+  return write(dataToSend, -1, toUAID);
+}
+
+int UdpProtocol::write(int dataToSend, int fromUAID, int toUAID) {
+  int status = checkConnectionStatus(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
+
+  softwareSerial->listen();
+  printlnLog(F("\nSENDING:"));
+
+  char dataToSendString[11];
+  itoa(dataToSend, dataToSendString, 10);
+  return sendData(dataToSendString, fromUAID, toUAID);
+}
+
+int UdpProtocol::write(float dataToSend, int toUAID) {
+  return write(dataToSend, -1, toUAID);
+}
+
+int UdpProtocol::write(float dataToSend, int fromUAID, int toUAID) {
+  int status = checkConnectionStatus(Error::WRITE_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
+
+  softwareSerial->listen();
+  printlnLog(F("\nSENDING:"));
+
+  String value = String(dataToSend);
+  char *dataToSendString = (char *)value.c_str();
+  return sendData(dataToSendString, fromUAID, toUAID);
 }
 
 void UdpProtocol::formatReceiveData(char *bData, char *dataToReceive) {
@@ -185,45 +192,59 @@ int UdpProtocol::receiveData(char *dataToReceive, int &fromUAID, int &toUAID) {
 }
 
 int UdpProtocol::read(char *dataToReceive, int &fromUAID) {
-  if (connection.getStatus() == Connection::ERROR) {
-    whileForever();
-    return Error::ERROR;
-  }
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::DISCONNECTED;
-  }
-  if (connection.getStatus() == Connection::FINISHED) {
-    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::FINISHED;
-  }
-
-  softwareSerial->listen();
-  printlnLog(F("\nRECEIVING:"));
-  memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
   int toUAID;
-  return receiveData(dataToReceive, fromUAID, toUAID);
+  return read(dataToReceive, fromUAID, toUAID);
 }
 
 int UdpProtocol::read(char *dataToReceive, int &fromUAID, int &toUAID) {
-  if (connection.getStatus() == Connection::ERROR) {
-    whileForever();
-    return Error::ERROR;
-  }
-  if (connection.getStatus() == Connection::DISCONNECTED) {
-    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::DISCONNECTED;
-  }
-  if (connection.getStatus() == Connection::FINISHED) {
-    error.setError(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
-    return Error::FINISHED;
-  }
+  int status = checkConnectionStatus(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
 
   softwareSerial->listen();
   printlnLog(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
   return receiveData(dataToReceive, fromUAID, toUAID);
 }
+
+int UdpProtocol::read(int &dataToReceive, int &fromUAID) {
+  int toUAID;
+  return read(dataToReceive, fromUAID, toUAID);
+}
+
+int UdpProtocol::read(int &dataToReceive, int &fromUAID, int &UAID) {
+  int status = checkConnectionStatus(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
+
+  softwareSerial->listen();
+  printlnLog(F("\nRECEIVING:"));
+
+  char dataToReceiveString[11];
+  dataToReceiveString[0] = '\0';
+  int length = receiveData(dataToReceiveString, fromUAID, UAID);
+  dataToReceive = atoi(dataToReceiveString);
+  return length;
+}
+
+int UdpProtocol::read(float &dataToReceive, int &fromUAID) {
+  int toUAID;
+  return read(dataToReceive, fromUAID, toUAID);
+}
+
+int UdpProtocol::read(float &dataToReceive, int &fromUAID, int &UAID) {
+  int status = checkConnectionStatus(Error::READ_PROTOCOL_NOT_CONNECTED_ERROR);
+  if (status < 0) return status;
+
+  softwareSerial->listen();
+  printlnLog(F("\nRECEIVING:"));
+
+  char dataToReceiveString[11];
+  dataToReceiveString[0] = '\0';
+  int length = receiveData(dataToReceiveString, fromUAID, UAID);
+  dataToReceive = atof(dataToReceiveString);
+  return length;
+}
+
+//////////////////////////////////////////////////////////////////
 
 int UdpProtocol::serverClose() {
   if (connection.getStatus() == Connection::ERROR) {

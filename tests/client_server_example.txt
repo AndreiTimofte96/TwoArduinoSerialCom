@@ -1,0 +1,126 @@
+// UAID = 8808 CLIENT
+#include "TcpProtocol.hpp"
+
+TcpProtocol tcpProtocol;
+struct {
+  int rxPort;
+  int txPort;
+  int UAID;
+} receiver[2];
+
+void receiversSetup() {
+  receiver[0].rxPort = 2;
+  receiver[0].txPort = 3;
+  receiver[0].UAID = 4987;
+}
+
+void setup() {
+  receiversSetup();
+
+  tcpProtocol.initializePorts(receiver[0].rxPort, receiver[0].txPort);  // RX, TX
+  tcpProtocol.initializeSerial(Serial, 9600, 500, true);                //Serial, baudRate, Serial.setTimeout
+}
+
+char dataToReceive[300];
+char userInput[] = "Ana are mere si tata merge la padure sa le culeaga!";
+int destinationUAID = 0;
+
+void loop() {
+  if (tcpProtocol.connect() < 0) {
+    tcpProtocol.printLastError();
+  }
+
+  int length;
+  if ((length = tcpProtocol.write(userInput, receiver[0].UAID)) < 0) {
+    tcpProtocol.printLastError();
+  }
+  Serial.println("WRITE LENGTH");
+  Serial.println(length);
+
+  if ((length = tcpProtocol.read(dataToReceive, destinationUAID)) < 0) {
+    tcpProtocol.printLastError();
+  }
+
+  Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
+  Serial.print(destinationUAID);
+  Serial.println(":");
+  Serial.println(dataToReceive);
+  Serial.println(length);
+  Serial.println();
+
+  if (tcpProtocol.clientClose() < 0) {
+    tcpProtocol.printLastError();
+  }  // else
+
+  Serial.println(tcpProtocol.getConnectionStatus());
+  while (1)
+    ;
+}
+
+// Salut, eu sunt Andrei si sunt student la Facultatea de Informatica Iasi!
+
+
+
+////////////////////////////////////////////////////////////////////////////////////
+
+// UAID = 3607 SERVER
+#include "TcpProtocol.hpp"
+
+TcpProtocol tcpProtocol;
+struct {
+  int rxPort;
+  int txPort;
+  int UAID;
+} receiver[2];
+
+void receiversSetup() {
+  receiver[0].rxPort = 2;
+  receiver[0].txPort = 3;
+  receiver[0].UAID = TcpProtocol::getUniqueArduinoIDFromEEEPROM();
+  ;
+}
+
+void setup() {
+  receiversSetup();
+
+  tcpProtocol.initializePorts(receiver[0].rxPort, receiver[0].txPort);  // RX, TX
+  tcpProtocol.initializeSerial(Serial, 9600, 500, true);                //Serial, baudRate, Serial.setTimeout
+}
+
+char dataToReceive[300];
+char userInput[] = "Salut, eu sunt Andrei si sunt student la Facultatea de Informatica Iasi!";
+int destinationUAID = 0;
+
+void loop() {
+  if (tcpProtocol.listen() < 0) {
+    tcpProtocol.printLastError();
+  }
+
+  int length;
+  if ((length = tcpProtocol.read(dataToReceive, destinationUAID)) < 0) {
+    tcpProtocol.printLastError();
+  }
+
+  Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
+  Serial.print(destinationUAID);
+  Serial.println(":");
+  Serial.println(dataToReceive);
+  Serial.println(length);
+  Serial.println();
+
+  if ((length = tcpProtocol.write(userInput, receiver[0].UAID)) < 0) {
+    tcpProtocol.printLastError();
+  }
+  Serial.println("WRITE LENGTH");
+  Serial.println(length);
+
+  if (tcpProtocol.clientClose() < 0) {
+    tcpProtocol.printLastError();
+  }  // else
+
+  Serial.println(tcpProtocol.getConnectionStatus());
+  while (1)
+    ;
+}
+
+// Salut, eu sunt Andrei si sunt student la Facultatea de Informatica Iasi!
