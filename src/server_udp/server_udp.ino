@@ -28,10 +28,12 @@ void setup() {
   clientsSetup();
 
   udpProtocol1.initializePorts(clients[0].rxPort, clients[0].txPort);  // RX, TX
-  udpProtocol1.initializeSerial(Serial, 9600, 500, true);              //Serial, baudRate, Serial.setTimeout
+  udpProtocol1.initializeSerial(Serial, 9600, 500);                    //Serial, baudRate, Serial.setTimeout
+  udpProtocol1.useShowLogs(true);
 
   udpProtocol2.initializePorts(clients[1].rxPort, clients[1].txPort);  // RX, TX
-  udpProtocol2.initializeSerial(Serial, 9600, 500, true);
+  udpProtocol2.initializeSerial(Serial, 9600, 500);
+  udpProtocol2.useShowLogs(true);
 }
 
 void loop() {

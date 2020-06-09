@@ -19,7 +19,7 @@ void setup() {
   receiversSetup();
 
   tcpProtocol.initializePorts(receiver[0].rxPort, receiver[0].txPort);  // RX, TX
-  tcpProtocol.initializeSerial(Serial, 9600, 500, false);               //Serial, baudRate, Serial.setTimeout
+  tcpProtocol.initializeSerial(Serial, 9600, 500);                      //Serial, baudRate, Serial.setTimeout
 }
 
 char dataToReceive[300];

@@ -27,10 +27,12 @@ void setup() {
   clientsSetup();
 
   tcpProtocol1.initializePorts(clients[0].rxPort, clients[0].txPort);  // RX, TX
-  tcpProtocol1.initializeSerial(Serial, 9600, 500, true);              //Serial, baudRate, Serial.setTimeout
+  tcpProtocol1.initializeSerial(Serial, 9600, 500);                    //Serial, baudRate, Serial.setTimeout
+  tcpProtocol1.useShowLogs(true);
 
   tcpProtocol2.initializePorts(clients[1].rxPort, clients[1].txPort);  // RX, TX
-  tcpProtocol2.initializeSerial(Serial, 9600, 500, true);
+  tcpProtocol2.initializeSerial(Serial, 9600, 500);
+  tcpProtocol2.useShowLogs(true);
 }
 
 bool checkConnectedClient(int clientUAID) {
