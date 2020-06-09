@@ -124,3 +124,25 @@ void loop() {
 }
 
 // Salut, eu sunt Andrei si sunt student la Facultatea de Informatica Iasi!
+
+
+ASYNC CODE EXAMPLE
+
+void loop() {
+  Serial.println("LOOP");
+  int length = udpProtocol1.read(dataToReceive, fromUAID);
+  if (length <= 0) {
+    if (length < 0) {
+      udpProtocol1.printLastError();
+    }
+  } else {
+    delay(10000);
+    Serial.println("\nRECEIVED DATA FROM CLIENT 1:");
+    Serial.println(dataToReceive);
+    Serial.println(fromUAID);
+
+    if ((length = udpProtocol1.write(dataToReceive, fromUAID)) < 0) {
+      udpProtocol1.printLastError();
+    }
+  }
+}

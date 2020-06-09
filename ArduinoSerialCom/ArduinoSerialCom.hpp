@@ -16,11 +16,12 @@ class ArduinoSerialCom {
   void initializePorts(int rxPort, int txPort);
   // void initializeProtocol(arduinoSerialComProtocols _protocol);
 
-  void initializeSerial(HardwareSerial &Serial, int beginSpeed, int timeout, bool showLogs);
   void initializeSerial(HardwareSerial &Serial, int beginSpeed, int timeout);
 
-  void initializeSerial(HardwareSerial &Serial, int beginSpeed, bool showLogs);
   void initializeSerial(HardwareSerial &Serial, int beginSpeed);
+
+  void useShowLogs(bool _SHOW_LOGS);
+  void useAsyncMode(bool _ASYNC_MODE);
 
   void printLastError();
   const char *getConnectionStatus();
@@ -32,7 +33,8 @@ class ArduinoSerialCom {
   Error error;
   HardwareSerial *hardwareSerial;
   SoftwareSerial *softwareSerial;
-  bool showLogs = false;
+  bool SHOW_LOGS = false;
+  bool ASYNC_MODE = false;
 
   void softwareSerial_readBytes(char *data, int length);
   void waitRead();

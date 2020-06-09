@@ -574,6 +574,9 @@ int TcpProtocol::read(char *dataToReceive, int &UAID) {
   softwareSerial->listen();
   printlnLog(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
+
+  if (ASYNC_MODE && !softwareSerial->available()) return 0;
+
   return receiveData(dataToReceive, UAID);
 }
 
@@ -583,6 +586,8 @@ int TcpProtocol::read(int &dataToReceive, int &UAID) {
 
   softwareSerial->listen();
   printlnLog(F("\nRECEIVING:"));
+
+  if (ASYNC_MODE && !softwareSerial->available()) return 0;
 
   char dataToReceiveString[11];
   dataToReceiveString[0] = '\0';
@@ -597,6 +602,8 @@ int TcpProtocol::read(float &dataToReceive, int &UAID) {
 
   softwareSerial->listen();
   printlnLog(F("\nRECEIVING:"));
+
+  if (ASYNC_MODE && !softwareSerial->available()) return 0;
 
   char dataToReceiveString[11];
   dataToReceiveString[0] = '\0';
