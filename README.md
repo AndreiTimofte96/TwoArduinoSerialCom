@@ -41,6 +41,8 @@ TcpProtocol myProtocol;
 myProtocol.initializePorts(rxPort, txPort);
 
 myProtocol.initializeSerial(Serial, 9600, 500); //Serial port, BAUD rate, Serial timeout
+myProtocol.useShowLogs(false); // the default is false, true if you want to see system logs
+myProtocol.useAsyncMode(false); // the default is false, true if you want read function to be non-blocking
 ```
 
 
@@ -111,7 +113,9 @@ TcpProtocol myProtocol;
 
 void setup() {
   myProtocol.initializePorts(2, 3);                       // RX, TX
-  myProtocol.initializeSerial(Serial, 9600, 500, false);  //Serial, baudRate, Serial.setTimeout
+  myProtocol.initializeSerial(Serial, 9600, 500);  //Serial, baudRate, Serial.setTimeout
+  myProtocol.useShowLogs(false); // the default is false
+  myProtocol.useAsyncMode(false); // the default is false
 }
 
 char dataToSend[] = "Some text sent by client";
@@ -165,7 +169,9 @@ int length;
 
 void setup() {
   myProtocol.initializePorts(2, 3);                       // RX, TX
-  myProtocol.initializeSerial(Serial, 9600, 500, false);  //Serial, baudRate, Serial.setTimeout
+  myProtocol.initializeSerial(Serial, 9600, 500);  //Serial, baudRate, Serial.setTimeout
+  myProtocol.useShowLogs(false); // the default is false
+  myProtocol.useAsyncMode(false); // the default is false
 }
 
 void loop() {
