@@ -201,7 +201,7 @@ int UdpProtocol::read(char *dataToReceive, int &fromUAID, int &toUAID) {
   if (status < 0) return status;
 
   softwareSerial->listen();
-  printlnLog(F("\nRECEIVING:"));
+  if (!ASYNC_MODE) printlnLog(F("\nRECEIVING:"));
   memset(dataToReceive, '\0', sizeof(char) * sizeof(dataToReceive));
 
   if (ASYNC_MODE && !softwareSerial->available()) return 0;

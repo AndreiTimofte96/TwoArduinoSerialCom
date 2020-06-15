@@ -19,25 +19,21 @@ void setup() {
   receiversSetup();
   udpProtocol.initializePorts(receiver[0].rxPort, receiver[0].txPort);  // RX, TX
   udpProtocol.initializeSerial(Serial, 9600, 500);                      //Serial, baudRate, Serial.setTimeout
+  udpProtocol.useShowLogs(false);
+  udpProtocol.useAsyncMode(true);
 }
 
 char dataToReceive[300];
 int fromUAID = 0;
 String str;
-int strLength;
+int length, strLength;
 
 void loop() {
-  int ok = 2;
-  int length;
-  while (ok) {
-    ok--;
-    while (!Serial.available())
-      ;
+  if (Serial.available()) {
     str = Serial.readStringUntil('\n');
     strLength = str.length();
     char userInput[strLength + 1];
     str.toCharArray(userInput, strLength + 1);
-
     Serial.println(userInput);
 
     if ((length = udpProtocol.write(userInput, receiver[0].UAID)) < 0) {
@@ -45,11 +41,13 @@ void loop() {
     }
     Serial.println("WRITE LENGTH");
     Serial.println(length);
+  }
 
-    if (!udpProtocol.read(dataToReceive, fromUAID)) {
-      udpProtocol.printLastError();
-    }
-
+  length = udpProtocol.read(dataToReceive, fromUAID);
+  if (length < 0) {
+    udpProtocol.printLastError();
+  }
+  if (length > 0) {
     Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
     Serial.print(fromUAID);
     Serial.println(":");
@@ -57,7 +55,4 @@ void loop() {
     Serial.println(length);
     Serial.println();
   }
-
-  while (1)
-    ;
 }

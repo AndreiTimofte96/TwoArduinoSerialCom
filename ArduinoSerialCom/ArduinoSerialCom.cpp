@@ -127,27 +127,33 @@ void ArduinoSerialCom::whileForever() {
 
 void ArduinoSerialCom::printLog(char *log) {
   if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->print(log);
 }
 void ArduinoSerialCom::printLog(const __FlashStringHelper *log) {
   if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->print(log);
 }
 void ArduinoSerialCom::printLog(int log) {
   if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->print(log);
 }
 void ArduinoSerialCom::printlnLog(char *log) {
   if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->println(log);
 }
 void ArduinoSerialCom::printlnLog(const __FlashStringHelper *log) {
   if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->println(log);
 }
 void ArduinoSerialCom::printlnLog(int log) {
   if (!SHOW_LOGS) return;
-  hardwareSerial->print(log);
+  hardwareSerial->print("[LOG]: ");
+  hardwareSerial->println(log);
 }
 
 const char *ArduinoSerialCom::getConnectionStatus() {
