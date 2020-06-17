@@ -5,32 +5,30 @@ ArduinoSerialCom::ArduinoSerialCom() {
 
 void ArduinoSerialCom::initializePorts(int rxPort, int txPort) {
   softwareSerial = new SoftwareSerial(rxPort, txPort);
-  softwareSerial->begin(9600);
+  // softwareSerial->begin(9600);
 }
 
 // void ArduinoSerialCom::initializeProtocol(arduinoSerialComProtocols _protocol) {
 //   protocol = _protocol;
 // }
 
-void ArduinoSerialCom::initializeSerial(HardwareSerial &Serial, int beginSpeed, int timeout, bool show) {
+void ArduinoSerialCom::initializeSerial(HardwareSerial &Serial, long beginSpeed, int timeout) {
   hardwareSerial = &Serial;
   hardwareSerial->begin(beginSpeed);
-  hardwareSerial->setTimeout(timeout);
-  showLogs = show;
-}
-
-void ArduinoSerialCom::initializeSerial(HardwareSerial &Serial, int beginSpeed, int timeout) {
-  hardwareSerial = &Serial;
-  hardwareSerial->begin(beginSpeed);
+  softwareSerial->begin(beginSpeed);
   hardwareSerial->setTimeout(timeout);
 }
 
-void ArduinoSerialCom::initializeSerial(HardwareSerial &Serial, int beginSpeed, bool show) {
-  initializeSerial(Serial, beginSpeed, 1000, show);
+void ArduinoSerialCom::initializeSerial(HardwareSerial &Serial, long beginSpeed) {
+  initializeSerial(Serial, beginSpeed, 1000);
 }
 
-void ArduinoSerialCom::initializeSerial(HardwareSerial &Serial, int beginSpeed) {
-  initializeSerial(Serial, beginSpeed, 1000, false);
+void ArduinoSerialCom::useShowLogs(bool _SHOW_LOGS) {
+  SHOW_LOGS = _SHOW_LOGS;
+}
+
+void ArduinoSerialCom::useAsyncMode(bool _ASYNC_MODE) {
+  ASYNC_MODE = _ASYNC_MODE;
 }
 
 void ArduinoSerialCom::printLastError() {
@@ -129,28 +127,34 @@ void ArduinoSerialCom::whileForever() {
 }
 
 void ArduinoSerialCom::printLog(char *log) {
-  if (!showLogs) return;
+  if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->print(log);
 }
 void ArduinoSerialCom::printLog(const __FlashStringHelper *log) {
-  if (!showLogs) return;
+  if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->print(log);
 }
 void ArduinoSerialCom::printLog(int log) {
-  if (!showLogs) return;
+  if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->print(log);
 }
 void ArduinoSerialCom::printlnLog(char *log) {
-  if (!showLogs) return;
+  if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->println(log);
 }
 void ArduinoSerialCom::printlnLog(const __FlashStringHelper *log) {
-  if (!showLogs) return;
+  if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
   hardwareSerial->println(log);
 }
 void ArduinoSerialCom::printlnLog(int log) {
-  if (!showLogs) return;
-  hardwareSerial->print(log);
+  if (!SHOW_LOGS) return;
+  hardwareSerial->print("[LOG]: ");
+  hardwareSerial->println(log);
 }
 
 const char *ArduinoSerialCom::getConnectionStatus() {

@@ -12,9 +12,17 @@ int length;
 String str;
 int strLength;
 
+// long baudRate = 115200;
+// long baudRate = 74800;
+// long baudRate = 57600;
+// long baudRate = 38400;
+// long baudRate = 19200;
+long baudRate = 9600;
+
 void setup() {
-  tcpProtocol.initializePorts(2, 3);                       // RX, TX
-  tcpProtocol.initializeSerial(Serial, 9600, 500, false);  //Serial, baudRate, Serial.setTimeout
+  tcpProtocol.initializePorts(2, 3);                    // RX, TX
+  tcpProtocol.initializeSerial(Serial, baudRate, 500);  //Serial, baudRate, Serial.setTimeout
+  // tcpProtocol.useShowLogs(true);
 }
 
 float start = 0, end = 0;
@@ -24,36 +32,6 @@ void loop() {
     tcpProtocol.printLastError();
   }
 
-  // int ok = 2;
-  // while (ok) {
-  //   ok--;
-
-  //   if ((length = tcpProtocol.read(dataToReceive, destinationUAID)) < 0) {
-  //     tcpProtocol.printLastError();
-  //   }
-
-  //   Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
-  //   Serial.print(destinationUAID);
-  //   Serial.println(":");
-  //   Serial.println(dataToReceive);
-  //   Serial.println(length);
-  //   Serial.println();
-
-  //   while (!Serial.available())
-  //     ;
-  //   str = Serial.readStringUntil('\n');
-  //   strLength = str.length();
-  //   char userInput[strLength + 1];
-  //   str.toCharArray(userInput, strLength + 1);
-
-  //   Serial.println(userInput);
-
-  //   if ((length = tcpProtocol.write(userInput, thisUAID)) < 0) {
-  //     tcpProtocol.printLastError();
-  //   }
-  //   Serial.println("WRITE LENGTH");
-  //   Serial.println(length);
-  // }
   while (1) {
     if ((length = tcpProtocol.read(dataToReceive, destinationUAID)) < 0) {
       tcpProtocol.printLastError();
@@ -62,13 +40,6 @@ void loop() {
     if ((length = tcpProtocol.write(dataToReceive, thisUAID)) < 0) {
       tcpProtocol.printLastError();
     }
-
-    // Serial.print("\nRECEIVED DATA THROUGH SERVER FROM CLIENT ");
-    // Serial.print(destinationUAID);
-    // Serial.println(":");
-    // Serial.println(dataToReceive);
-    // Serial.println(length);
-    // Serial.println(end - start);
   }
 
   if (tcpProtocol.serverClose() < 0) {

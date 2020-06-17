@@ -12,6 +12,7 @@
     "istream": "cpp",
     "tuple": "cpp",
     "utility": "cpp",
-    "memory": "cpp"
+    "memory": "cpp",
+    "cmath": "cpp"
   }
 }
